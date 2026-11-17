@@ -1,148 +1,148 @@
-Run name;Sample name;Type of ice;RIXS or XAS;Veritas beamline energy (eV);X-ray energy (eV) Veritasrm_energy;Total counts;Temperature (K);x coordinates (start);x coordinates (end);x-steps;y coordinates (start);y coordinates (end);y-steps;integration time (s);time start;Long Comment;;;;;;;;
-DAY 1;;;;;;;;;;;;;;;;;;;;;;;;
-entry13520;;;XAS;;;;;;;;;;;;;Data was temporarily saved in /data/staff/veritas/temp_comissioning_folder/2022/w49 . we need to find a more permanent solution to that;;;;;;;;
-acq005;;Hexagonal ice;RIXS;536 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;16:50;vibrations;;;;;;;;
-acq006;;Hexagonal ice;RIXS;537 eV;533;792704;80;81,5;82,5;80;42,14;41,24;50;5;18:19;vibrations;;;;;;;;
-acq007;;Hexagonal ice;RIXS;534 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;20:22;to collects O2 signal for the better energy calibration;;;;;;;;
-acq008;;Hexagonal ice;RIXS;533.8 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;20:28;to collects O2 signal for the better energy calibration;;;;;;;;
-acq009;;Hexagonal ice;RIXS;533.6 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;20:35;to collects O2 signal for the better energy calibration;;;;;;;;
-acq010;;Hexagonal ice;RIXS;533.4 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;20:39;to collects O2 signal for the better energy calibration;;;;;;;;
-acq011;;Hexagonal ice;RIXS;534.2 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;20:46;to collects O2 signal for the better energy calibration;;;;;;;;
-acq012;;Hexagonal ice;RIXS;534.4 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;20:51;to collects O2 signal for the better energy calibration;;;;;;;;
-acq013;;Hexagonal ice;RIXS;533.0 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;20:51;to collects O2 signal for the better energy calibration;;;;;;;;
-acq014;;Hexagonal ice;RIXS;532.8 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;20:51;to collects O2 signal for the better energy calibration;;;;;;;;
-acq015;;Hexagonal ice;RIXS;532.6 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;20:51;to collects O2 signal for the better energy calibration;;;;;;;;
-acq016;;Hexagonal ice;RIXS;539 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;21:14;vibrations;Bad.(Maybe shadow of sample grid);;;;;;;
-acq017;;Hexagonal ice;RIXS;539 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;21:14;vibrations;beam down during the measurement;;;;;;;
-acq018;;Hexagonal ice;RIXS;539 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;;vibrations;Bad.;;;;;;;
-acq019;;Hexagonal ice;RIXS;539 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;;vibrations;short acquisition time;;;;;;;
-acq020;;Hexagonal ice;RIXS;539 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;23:12;vibrations;bad. not on sample;;;;;;;
-entry13529;;;XAS;;;;;;;;;;;;;;;;;;;;;
-entry13533;;;XAS;;;;;80,06;;;41,325;;;;;;;;;;;;;
-acq021;;Hexagonal ice;RIXS;539 eV;533;807844;80;80,06;80,78;50;41,4;40,6;80;5;00:25:00;vibrations;;;;;;;;
-acq022;;Hexagonal ice;RIXS;542 eV;533;850000;80;80,06;80,78;50;41,4;40,6;80;5;02:50:56;vibrations;;;;;;;;
-acq023;;Hexagonal ice;RIXS;536 eV;523;400000;80;80,06;80,78;50;41,4;40,6;80;5;05:32:56;valence;;;;;;;;
-acq024;;Hexagonal ice;RIXS;537 eV;523;400000;80;80,06;80,78;50;41,4;40,6;80;5;05:59:13;valence;;;;;;;;
-acq025;;Hexagonal ice;RIXS;530 eV;523;;80;80,06;80,78;50;41,4;40,6;80;5;06:13:14;calibration;;;;;;;;
-acq026;;Hexagonal ice;RIXS;528 eV;523;;80;80,06;80,78;50;41,4;40,6;80;5;06:14:14;calibration;;;;;;;;
-acq027;;Hexagonal ice;RIXS;532 eV;523;;80;80,06;80,78;50;41,4;40,6;80;5;06:15:14;calibration;;;;;;;;
-acq028;;Hexagonal ice;RIXS;539 eV;523;400000;80;80,06;80,78;50;41,4;40,6;80;5;06:15:14;valence;;;;;;;;
-acq029;;Hexagonal ice;RIXS;542 eV;523;400000;80;80,06;80,78;50;41,4;40,6;80;5;06:34:14;valence;;;;;;;;
-acq030;;Hexagonal ice;RIXS;552 eV;523;400000;80;80,06;80,78;50;41,4;40,6;80;5;06:48:14;valence;;;;;;;;
-acq031;;Hexagonal ice;RIXS;535 eV;523;300000;80;80,06;80,78;50;41,4;40,6;80;5;07:00:14;valence;;;;;;;;
-acq032;;Hexagonal ice;RIXS;535.5 eV;523;400000;80;80,06;80,78;50;41,4;40,6;80;5;07:22:14;valence;;;;;;;;
-acq033;;Hexagonal ice;RIXS;536.5 eV;523;300000;80;80,06;80,78;50;41,4;40,6;80;5;07:42:14;valence;;;;;;;;
-acq034;;Hexagonal ice;RIXS;536.25 eV;523;300000;80;80,06;80,78;50;41,4;40,6;80;5;08:00:14;valence;;;;;;;;
-acq035;;Hexagonal ice;RIXS;535.75 eV;523;300000;80;80,06;80,78;50;41,4;40,6;80;5;08:20:14;valence;;;;;;;;
-acq036;;Hexagonal ice;RIXS;542 eV;533;300000;80;80,06;80,78;50;41,4;40,6;80;5;08:50;vibrations;;;;;;;;
-DAY 2;;;;;;;;;;;;;;;;;;;;;;;;
-acq037;;Hexagonal ice;RIXS;539 eV;533;;80;80,06;80,78;50;41,4;40,6;80;5;;vibrations;;;;;;;;
-entry13537;;Hexagonal ice;XAS;;;;80;;;;;;;;;aborted;;;;;;;;
-acq038;;Hexagonal ice;RIXS;539 eV;533;;80;80,06;80,78;50;41,4;40,6;80;5;;vibrations, short run to check the macro still works;;;;;;;;
-entry13538;;Hexagonal ice;XAS;;;;80;;;;;;;;;;;;;;;;;
-acq039;;Hexagonal ice;RIXS;539 eV;533;;80;79,868;80,741;50;39,455;38,738;80;5;13:07:56;vibrations;;;;;;;;
-acq040;;Hexagonal ice;RIXS;533.2 eV;533;;80;;;;;;;5;14:31:00;vibrations, arm energy is too off;;;;;;;;
-acq041;;Hexagonal ice;RIXS;533.2 eV;528;;80;;;;;;;5;;vibrations for o2 calibration;;;;;;;;
-acq042;;Hexagonal ice;RIXS;535.0 eV;528;;80;;;;;;;5;;vibrations for o2 calibration - 300 seconds;;;;;;;;
-acq043;;Hexagonal ice;RIXS;535.2 eV;528;;80;;;;;;;5;14:44:00;vibrations for o2 calibration - 300 seconds;;;;;;;;
-acq044;;Hexagonal ice;RIXS;535.4 eV;528;;80;;;;;;;5;14:49:00;vibrations for o2 calibration - 300 seconds;;;;;;;;
-acq045;;Hexagonal ice;RIXS;534.8 eV;528;;80;;;;;;;5;14:54:00;vibrations for o2 calibration - 300 seconds;;;;;;;;
-acq046;;Hexagonal ice;RIXS;534.6 eV;528;;80;;;;;;;5;15:01:00;vibrations for o2 calibration - 300 seconds;;;;;;;;
-acq047;;Hexagonal ice;RIXS;534.4 eV;528;;80;;;;;;;5;15:01:00;vibrations for o2 calibration - 300 seconds;;;;;;;;
-acq048;;Hexagonal ice;RIXS;533.2 eV;528;;80;;;;;;;5;15:01:00;vibrations for o2 calibration - 300 seconds;;;;;;;;
-acq049;;Hexagonal ice;RIXS;533 eV;528;;80;;;;;;;5;15:01:00;vibrations for o2 calibration - 600 seconds;;;;;;;;
-acq050;;Hexagonal ice;RIXS;535.5 eV;528;;80;79,868;80,741;50;39,455;38,738;80;5;16:31:14;vibrations, arm energy is different from before. Apparently the motors did not move durign this one but the signal is constant;;;;;;;;
-acq051;;Hexagonal ice;RIXS;536.5 eV;533;;80;80,28;80,741;25;39,455;38,738;80;5;16:57:51;vibrations, macro for sample motor doesn't resond, so we change the start position of x coordinate;;;;;;;;
-acq052;;Hexagonal ice;RIXS;537.5 eV;533;470000;80;80,28;80,741;25;39,455;38,738;80;5;18:49:59;vibrations;;;;;;;;
-acq053;;Hexagonal ice;RIXS;537.5 eV;533;300000;80;80,22;80,93;50;43,04;42,33;80;5;20:06:40;vibrations;;;;;;;;
-acq054;;Hexagonal ice;RIXS;538 eV;533;1000000;80;80,22;80,93;50;43,04;42,33;80;5;20:52:55;vibrations;;;;;;;;
-acq055;;Hexagonal ice;RIXS;537.25 eV;533;800000;80;80,22;80,93;50;43,04;42,33;80;5;23:40:40;vibrations;;;;;;;;
-acq056;;Hexagonal ice;RIXS;536.5 eV;533;;80;80,87;don'tmove;;42,4;don't  move;;;01:46:54;for the check beam damage;;;;;;;;
-acq057;;Hexagonal ice;RIXS;536.75 eV;533;;80;80,22;80,93;50;43,04;42,33;80;5;02:28:13;vibrations;;;;;;;;
-acq058;;Hexagonal ice;RIXS;536.75 eV;533;300000;80;80,22;80,93;50;43,04;42,33;80;5;02:52:53;vibrations;;;;;;;;
-acq059;;Hexagonal ice;RIXS;538.5 eV;533;;80;80,22;80,93;50;43,04;42,33;80;5;03:45:11;vibrations;;;;;;;;
-DAY 3;;;;;;;;;;;;;;;;;;;;;;;;
-acq060;;Hexagonal ice;RIXS;535.5 eV;523;100000;80;80,22;80,93;50;43,04;42,33;80;5;08:29:33;valence - didnt realise we had this one already;;;;;;;;
-acq061;;Hexagonal ice;RIXS;537.5 eV;523;400000;80;80,22;80,93;50;43,04;42,33;80;5;08:29:33;valence;;;;;;;;
-acq062;;Hexagonal ice;RIXS;538 eV;523;400000;80;80,22;80,93;50;43,04;42,33;80;5;08:29:33;valence;;;;;;;;
-acq063;;Hexagonal ice ;RIXS - energy scale;533 532 531;523;;;;;;;;;;;;;;;;;;;
-entry13550;;Hexagonal ice (D2O);XAS;;;;80;;;;;;;;10:55:34;;;;;;;;;
-New sample - New files: 20221209_1.h5 and 20221209_DLD_1.h5 ;;;;;;;;;;;;;;;;;;;;;;;;
-acq001;;Hexagonal ice (D2O);RIXS;537;533;750000;80;80,212;81,126;50;41,047;40,057;80;5;11:09:37;vibrations  - last 1000 seconds are just noise;;;;;;;;
-acq002;;Hexagonal ice (D2O);RIXS;542;533;600000 -  but some is noise at the low energies;80;80,212;81,126;50;41,047;40,057;80;5;14:01:00;vibrations;;;;;;;;
-acq003;;Hexagonal ice (D2O);RIXS;537,5;533;;80;80,212;81,126;50;41,047;40,057;80;5;16:04:00;vibrations - lets see if the weird thing is there here too;;;;;;;;
-acq004;;Hexagonal ice (D2O);RIXS;537;523;;80;79,97;80,757;80;39,18;38,44;50;5;18:06:48;valence;;;;;;;;
-acq005;;Hexagonal ice (D2O);RIXS;542;523;;80;79,97;80,757;80;39,18;38,44;50;5;18:30:45;valence;;;;;;;;
-acq006;;Hexagonal ice (D2O);RIXS;552;523;;80;79,97;80,757;80;39,18;38,44;50;5;18:52:56;valence;;;;;;;;
-acq007;;Hexagonal ice (D2O);RIXS;533, 532, 531;523;;80;79,97;80,757;80;39,18;38,44;50;5;19:16:54;calib;;;;;;;;
-acq008;;Hexagonal ice (D2O);RIXS;539;533;;80;79,97;80,757;80;39,18;38,44;50;5;19:25:01;vibrations;;;;;;;;
-acq009;;Hexagonal ice (D2O);RIXS;535,5;533;;80;79,97;80,757;80;39,18;38,44;50;5;9:29:58 PM;vibrations;;;;;;;;
-acq010;;Hexagonal ice (D2O);RIXS;536,5;533;;80;79,97;80,757;80;39,18;38,44;50;5;9:49:49 PM;vibrations;;;;;;;;
-acq011;;Hexagonal ice (D2O);RIXS;538;533;;80;79,97;80,757;80;39,18;38,44;50;5;9:49:49 PM;vibrations;;;;;;;;
-acq012;;Hexagonal ice (D2O);RIXS;535,5;523;;80;79,97;80,757;80;39,18;38,44;50;5;;valence;the sample was not moving;;;;;;;
-acq013;;Hexagonal ice (D2O);RIXS;535,5;523;;80;79,97;80,757;80;39,18;38,44;50;5;02:10:50;valence;;;;;;;;
-acq014;;Hexagonal ice (D2O);RIXS;536,5;523;;80;79,97;80,757;80;39,18;38,44;50;5;;valence;;;;;;;;
-acq015;;Hexagonal ice (D2O);RIXS;538;523;;80;79,97;80,757;80;39,18;38,44;50;5;04:27:19;valence;;;;;;;;
-acq016;;Hexagonal ice (D2O);RIXS;536;523;;80;79,97;80,757;80;39,18;38,44;50;5;04:43:23;valence;;;;;;;;
-acq017;;Hexagonal ice (D2O);RIXS;537;523;;80;79,97;80,757;80;39,18;38,44;50;5;04:43:23;valence;;;;;;;;
-acq018;;Hexagonal ice (D2O);RIXS;536;523;;80;79,97;80,757;80;39,18;38,44;50;5;06:34:54;valence;;;;;;;;
-acq019;;Hexagonal ice (D2O);RIXS;535,5;523;;80;79,97;80,757;80;39,18;38,44;50;5;07:30:00;valence;;;;;;;;
-entry13555;;Hexagonal ice (D2O);XAS;;;;80;;;;;;;;08:25:28;;;;;;;;;
-acq020;;Hexagonal ice (D2O);RIXS;538;523;;80;81,839;82,804;80;41,655;40,727;50;5;08:43:53;valence;;;;;;;;
-acq021;;Hexagonal ice (D2O);RIXS;552;523;;80;81,839;82,804;80;41,655;40,727;50;5;09:07:04;"valence; beam is gone again";;;;;;;;
-acq022;;Hexagonal ice (D2O);RIXS;552;523;;80;81,839;82,804;80;41,655;40,727;50;5;09:32:27;valence;;;;;;;;
-acq023;;Hexagonal ice (D2O);RIXS;542;523;;80;81,839;82,804;80;41,655;40,727;50;5;10:19:45;valence;;;;;;;;
-DAY 4;;;;;;;;;;;;;;;;;;;;;;;;
-New sample - New files: 20221210_1.h5 and 20221210_DLD_1.h5 ;;;;;;;;;;;;;;;;;;;;;;;;
-entry13557;;LDA;mesh scan;542;;;80;77;83,5;20;44;38;50;0,05;;"aborted; bad energy selection";;;;;;;;
-entry13558;;LDA;mesh scan;528;;;80;77;83,5;20;44;38;50;0,05;12:40:48;;;;;;;;;
-entry13559;;LDA;mesh scan;531;;;80;77;83,5;20;44;38;50;0,05;12:55:23;"aborted; not good";;;;;;;;
-entry13560;;LDA;mesh scan;540;;;80;77;83,5;20;44;38;50;0,05;13:05:45;;;;;;;;;
-entry13563;;LDA;XAS;;;;80;;;;;;;;13:45:05;;;;;;;;;
-entry13563;;LDA;absorption;;;;;82,628;;;40,675;;;;;;;;;;;;;
-entry13564;;LDA;absorption;;;;;82,108;;;39,099;;;;13:50:50;;;;;;;;;
-acq000;;LDA;RIXS;552;523;;80;82,015;83,055;50;41,296;40,377;80;5;13:58:46;valence;;;;;;;;
-acq001;;LDA;RIXS;542;523;;80;82,015;83,055;50;41,296;40,377;80;5;14:54:51;valence;;;;;;;;
-acq002;;LDA;RIXS;539;523;;80;82,015;83,055;50;41,296;40,377;80;5;15:55:17;valence;;;;;;;;
-acq003;;LDA;RIXS;537;523;;80;82,015;83,055;50;41,296;40,377;80;5;16:56:00;valence;;;;;;;;
-acq004;;LDA;RIXS;533 532 531;523;;80;82,015;83,055;50;41,296;40,377;80;5;17:56:46;"valence; measure for calibration";;;;;;;;
-acq005;;LDA;RIXS;537;533;;80;82,015;83,055;50;41,296;40,377;80;5;18:08:18;vibration;;;;;;;;
-entry13566;;LDA;absorption;;;;;80,966;;;42,549;;;;8:14:48 PM;;;;;;;;;
-acq006;;LDA;RIXS;539;533;;80;80,966;83,055;50;42,549;40,377;80;5;20:19:38;vibration;;;;;;;;
-acq007;;LDA;RIXS;542;533;;80;80,966;83,055;50;42,549;40,377;80;5;00:08:33;vibration;;;;;;;;
-acq008;;;;534 535 536 537 540;;;;;;;;;;;;calibration, but not good;;;;;;;;
-acq009;;LDA;RIXS;542;533;;80;80,966;83,055;50;42,549;40,377;80;5;00:14:31;vibration;;;;;;;;
-acq010;;LDA;RIXS;552;533;;80;80,966;83,055;50;42,549;40,377;80;5;03:46:00;vibration;;;;;;;;
-DAY 5;;;;;;;;;;;;;;;;;;;;;;;;
-acq011;;LDA;RIXS;538;533;;80;80,966;83,055;50;42,549;40,377;80;5;08:05:13;vibration;;;;;;;;
-entry13569;;LDA;XAS;;;;80;81,327;;;42,74;;;;10:04:56;;;;;;;;;
-acq012;;LDA;RIXS;537,5;533;;80;81,343;81,729;25;42,662;41,68;80;5;10:10:14;vibration;;;;;;;;
-acq013;;LDA;RIXS;527,9;523;;80;81,343;81,729;25;42,662;41,68;80;5;12:11:52;vibration;;;;;;;;
-entry13571;;Hexagonal ice (H2O);mesh scan;540;;;80;77;83,5;20;44;38;50;0,05;;;;;;;;;;
-New sample - New files: 20221211_1.h5 and 20221211_DLD_1.h5 ;;;;;;;;;;;;;;;;;;;;;;;;
-entry13572;;Hexagonal ice (H2O);XAS;;;;80;80,798;;;40,989;;;;13:58:39;;;;;;;;;
-acq014;;Hexagonal ice (H2O);RIXS;552;523;;80;80,337;81,2;50;41,48;40,638;80;5;;"aborted; no counts and did not create new file";;;;;;;;
-acq000;;Hexagonal ice (H2O);RIXS;552;523;;80;80,337;81,2;50;41,48;40,638;80;5;14:08:54;valence, beam dumped at last 10 mins of measurement;;;;;;;;
-acq001;;Hexagonal ice (H2O);RIXS;552;523;;80;80,337;81,2;50;41,48;40,638;80;5;15:25:46;valence, did not open the valve in the upstream;;;;;;;;
-acq002;;Hexagonal ice (H2O);RIXS;552;523;;80;80,337;81,2;50;41,48;40,638;80;5;15:26:16;valence;;;;;;;;
-acq003;;Hexagonal ice (H2O);RIXS;542;523;;80;80,337;81,2;50;41,48;40,638;80;5;16:04:33;valence;;;;;;;;
-acq004;;Hexagonal ice (H2O);RIXS;537;523;;80;80,337;81,2;50;41,48;40,638;80;5;17:05:18;valence;;;;;;;;
-acq005;;Hexagonal ice (H2O);RIXS;539;523;;80;80,337;81,2;50;41,48;40,638;80;5;18:07:37;valence;;;;;;;;
-acq006;;Hexagonal ice (H2O);RIXS;537,5;523;;80;80,337;81,2;50;41,48;40,638;80;5;19:09:17;valence;;;;;;;;
-acq007;;Hexagonal ice (H2O);RIXS;538;523;;80;80,337;81,2;50;41,48;40,638;80;5;20:09:37;valence;;;;;;;;
-acq008;;Hexagonal ice (H2O);RIXS;536,5;523;;80;80,337;81,2;50;41,48;40,638;80;5;21:06:32;valence;;;;;;;;
-entry13576;;LDA;mesh scan;540;;;80;77;83,5;20;44;38;50;0,05;11:21:52 PM;;;;;;;;;
-entry13577;;LDA;XAS;;;;80;82,02;;;40,16;;;;23:38:55;;;;;;;;;
-acq009;;LDA;RIXS;536,5;523;;80;82,03;82,95;50;40,16;39,48;80;5;23:43:59;valence;;;;;;;;
-acq010;;LDA;RIXS;537,5;533;;80;82,03;82,95;50;40,16;39,48;80;5;23:59:49;vibration;;;;;;;;
-acq011;;LDA;RIXS;538;533;;80;82,03;82,95;50;40,16;39,48;80;5;02:00roughly;vibration;;;;;;;;
-acq012;;LDA;RIXS;542;533;;80;82,03;82,95;50;40,16;39,48;80;5;03:57;vibration;;;;;;;;
-acq013;;LDA;RIXS;539;533;;80;80,747;81,653;50;38,895;38,006;80;5;05:45;vibration;no sample;;;;;;;
-acq014;;LDA;RIXS;539;533;;80;81,611;82,04;25;41,085;40,173;70;5;06:08;vibration;no sample;;;;;;;
-entry13581;;LDA;XAS;;;;80;81,817;;;41,059;;;;06:15:07;;;;;;;;;
-entry13583;;LDA;XAS;;;;80;82,676;;;41,763;;;;06:15:07;;;;;;;;;
-entry13584;;LDA;XAS;;;;80;81,066;;;41,42;;;;6:22:15 AM;;;;;;;;;
-acq015;;LDA;RIXS;542;533;;80;80,999;81,477;25;41,482;40,578;70;5;06:24;vibration;;;;;;;;
-entry13586;;LDA;;;;;80;81,28587;;;41,13329;;;;07:30;absorption;;;;;;;;
-acq016;;LDA;RIXS;550;523;;;81,28587;;;41.13329 ->41.11 at 600 seconds;;;;07:35;to see if not moving makes hexagonal ice - wrong energy :(;;;;;;;;
-acq017;;LDA;RIXS;552;523;;;81,28587;;;41,09;;;;07:35;to see if not moving makes hexagonal ice;;;;;;;;
+Run name,Sample name,Type of ice,RIXS or XAS,Veritas beamline energy (eV),X-ray energy (eV) Veritasrm_energy,Total counts,Temperature (K),x coordinates (start),x coordinates (end),x-steps,y coordinates (start),y coordinates (end),y-steps,integration time (s),time start,Long Comment,,,,,,,,
+DAY 1,,,,,,,,,,,,,,,,,,,,,,,,
+entry13520,,,XAS,,,,,,,,,,,,,Data was temporarily saved in /data/staff/veritas/temp_comissioning_folder/2022/w49 . we need to find a more permanent solution to that,,,,,,,,
+acq005,,Hexagonal ice,RIXS,536 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,16:50,vibrations,,,,,,,,
+acq006,,Hexagonal ice,RIXS,537 eV,533,792704,80,"81,5","82,5",80,"42,14","41,24",50,5,18:19,vibrations,,,,,,,,
+acq007,,Hexagonal ice,RIXS,534 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,20:22,to collects O2 signal for the better energy calibration,,,,,,,,
+acq008,,Hexagonal ice,RIXS,533.8 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,20:28,to collects O2 signal for the better energy calibration,,,,,,,,
+acq009,,Hexagonal ice,RIXS,533.6 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,20:35,to collects O2 signal for the better energy calibration,,,,,,,,
+acq010,,Hexagonal ice,RIXS,533.4 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,20:39,to collects O2 signal for the better energy calibration,,,,,,,,
+acq011,,Hexagonal ice,RIXS,534.2 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,20:46,to collects O2 signal for the better energy calibration,,,,,,,,
+acq012,,Hexagonal ice,RIXS,534.4 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,20:51,to collects O2 signal for the better energy calibration,,,,,,,,
+acq013,,Hexagonal ice,RIXS,533.0 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,20:51,to collects O2 signal for the better energy calibration,,,,,,,,
+acq014,,Hexagonal ice,RIXS,532.8 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,20:51,to collects O2 signal for the better energy calibration,,,,,,,,
+acq015,,Hexagonal ice,RIXS,532.6 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,20:51,to collects O2 signal for the better energy calibration,,,,,,,,
+acq016,,Hexagonal ice,RIXS,539 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,21:14,vibrations,Bad.(Maybe shadow of sample grid),,,,,,,
+acq017,,Hexagonal ice,RIXS,539 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,21:14,vibrations,beam down during the measurement,,,,,,,
+acq018,,Hexagonal ice,RIXS,539 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,,vibrations,Bad.,,,,,,,
+acq019,,Hexagonal ice,RIXS,539 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,,vibrations,short acquisition time,,,,,,,
+acq020,,Hexagonal ice,RIXS,539 eV,533,,80,"81,5","82,5",80,"42,14","41,24",50,5,23:12,vibrations,bad. not on sample,,,,,,,
+entry13529,,,XAS,,,,,,,,,,,,,,,,,,,,,
+entry13533,,,XAS,,,,,"80,06",,,"41,325",,,,,,,,,,,,,
+acq021,,Hexagonal ice,RIXS,539 eV,533,807844,80,"80,06","80,78",50,"41,4","40,6",80,5,00:25:00,vibrations,,,,,,,,
+acq022,,Hexagonal ice,RIXS,542 eV,533,850000,80,"80,06","80,78",50,"41,4","40,6",80,5,02:50:56,vibrations,,,,,,,,
+acq023,,Hexagonal ice,RIXS,536 eV,523,400000,80,"80,06","80,78",50,"41,4","40,6",80,5,05:32:56,valence,,,,,,,,
+acq024,,Hexagonal ice,RIXS,537 eV,523,400000,80,"80,06","80,78",50,"41,4","40,6",80,5,05:59:13,valence,,,,,,,,
+acq025,,Hexagonal ice,RIXS,530 eV,523,,80,"80,06","80,78",50,"41,4","40,6",80,5,06:13:14,calibration,,,,,,,,
+acq026,,Hexagonal ice,RIXS,528 eV,523,,80,"80,06","80,78",50,"41,4","40,6",80,5,06:14:14,calibration,,,,,,,,
+acq027,,Hexagonal ice,RIXS,532 eV,523,,80,"80,06","80,78",50,"41,4","40,6",80,5,06:15:14,calibration,,,,,,,,
+acq028,,Hexagonal ice,RIXS,539 eV,523,400000,80,"80,06","80,78",50,"41,4","40,6",80,5,06:15:14,valence,,,,,,,,
+acq029,,Hexagonal ice,RIXS,542 eV,523,400000,80,"80,06","80,78",50,"41,4","40,6",80,5,06:34:14,valence,,,,,,,,
+acq030,,Hexagonal ice,RIXS,552 eV,523,400000,80,"80,06","80,78",50,"41,4","40,6",80,5,06:48:14,valence,,,,,,,,
+acq031,,Hexagonal ice,RIXS,535 eV,523,300000,80,"80,06","80,78",50,"41,4","40,6",80,5,07:00:14,valence,,,,,,,,
+acq032,,Hexagonal ice,RIXS,535.5 eV,523,400000,80,"80,06","80,78",50,"41,4","40,6",80,5,07:22:14,valence,,,,,,,,
+acq033,,Hexagonal ice,RIXS,536.5 eV,523,300000,80,"80,06","80,78",50,"41,4","40,6",80,5,07:42:14,valence,,,,,,,,
+acq034,,Hexagonal ice,RIXS,536.25 eV,523,300000,80,"80,06","80,78",50,"41,4","40,6",80,5,08:00:14,valence,,,,,,,,
+acq035,,Hexagonal ice,RIXS,535.75 eV,523,300000,80,"80,06","80,78",50,"41,4","40,6",80,5,08:20:14,valence,,,,,,,,
+acq036,,Hexagonal ice,RIXS,542 eV,533,300000,80,"80,06","80,78",50,"41,4","40,6",80,5,08:50,vibrations,,,,,,,,
+DAY 2,,,,,,,,,,,,,,,,,,,,,,,,
+acq037,,Hexagonal ice,RIXS,539 eV,533,,80,"80,06","80,78",50,"41,4","40,6",80,5,,vibrations,,,,,,,,
+entry13537,,Hexagonal ice,XAS,,,,80,,,,,,,,,aborted,,,,,,,,
+acq038,,Hexagonal ice,RIXS,539 eV,533,,80,"80,06","80,78",50,"41,4","40,6",80,5,,"vibrations, short run to check the macro still works",,,,,,,,
+entry13538,,Hexagonal ice,XAS,,,,80,,,,,,,,,,,,,,,,,
+acq039,,Hexagonal ice,RIXS,539 eV,533,,80,"79,868","80,741",50,"39,455","38,738",80,5,13:07:56,vibrations,,,,,,,,
+acq040,,Hexagonal ice,RIXS,533.2 eV,533,,80,,,,,,,5,14:31:00,"vibrations, arm energy is too off",,,,,,,,
+acq041,,Hexagonal ice,RIXS,533.2 eV,528,,80,,,,,,,5,,vibrations for o2 calibration,,,,,,,,
+acq042,,Hexagonal ice,RIXS,535.0 eV,528,,80,,,,,,,5,,vibrations for o2 calibration - 300 seconds,,,,,,,,
+acq043,,Hexagonal ice,RIXS,535.2 eV,528,,80,,,,,,,5,14:44:00,vibrations for o2 calibration - 300 seconds,,,,,,,,
+acq044,,Hexagonal ice,RIXS,535.4 eV,528,,80,,,,,,,5,14:49:00,vibrations for o2 calibration - 300 seconds,,,,,,,,
+acq045,,Hexagonal ice,RIXS,534.8 eV,528,,80,,,,,,,5,14:54:00,vibrations for o2 calibration - 300 seconds,,,,,,,,
+acq046,,Hexagonal ice,RIXS,534.6 eV,528,,80,,,,,,,5,15:01:00,vibrations for o2 calibration - 300 seconds,,,,,,,,
+acq047,,Hexagonal ice,RIXS,534.4 eV,528,,80,,,,,,,5,15:01:00,vibrations for o2 calibration - 300 seconds,,,,,,,,
+acq048,,Hexagonal ice,RIXS,533.2 eV,528,,80,,,,,,,5,15:01:00,vibrations for o2 calibration - 300 seconds,,,,,,,,
+acq049,,Hexagonal ice,RIXS,533 eV,528,,80,,,,,,,5,15:01:00,vibrations for o2 calibration - 600 seconds,,,,,,,,
+acq050,,Hexagonal ice,RIXS,535.5 eV,528,,80,"79,868","80,741",50,"39,455","38,738",80,5,16:31:14,"vibrations, arm energy is different from before. Apparently the motors did not move durign this one but the signal is constant",,,,,,,,
+acq051,,Hexagonal ice,RIXS,536.5 eV,533,,80,"80,28","80,741",25,"39,455","38,738",80,5,16:57:51,"vibrations, macro for sample motor doesn't resond, so we change the start position of x coordinate",,,,,,,,
+acq052,,Hexagonal ice,RIXS,537.5 eV,533,470000,80,"80,28","80,741",25,"39,455","38,738",80,5,18:49:59,vibrations,,,,,,,,
+acq053,,Hexagonal ice,RIXS,537.5 eV,533,300000,80,"80,22","80,93",50,"43,04","42,33",80,5,20:06:40,vibrations,,,,,,,,
+acq054,,Hexagonal ice,RIXS,538 eV,533,1000000,80,"80,22","80,93",50,"43,04","42,33",80,5,20:52:55,vibrations,,,,,,,,
+acq055,,Hexagonal ice,RIXS,537.25 eV,533,800000,80,"80,22","80,93",50,"43,04","42,33",80,5,23:40:40,vibrations,,,,,,,,
+acq056,,Hexagonal ice,RIXS,536.5 eV,533,,80,"80,87",don'tmove,,"42,4",don't  move,,,01:46:54,for the check beam damage,,,,,,,,
+acq057,,Hexagonal ice,RIXS,536.75 eV,533,,80,"80,22","80,93",50,"43,04","42,33",80,5,02:28:13,vibrations,,,,,,,,
+acq058,,Hexagonal ice,RIXS,536.75 eV,533,300000,80,"80,22","80,93",50,"43,04","42,33",80,5,02:52:53,vibrations,,,,,,,,
+acq059,,Hexagonal ice,RIXS,538.5 eV,533,,80,"80,22","80,93",50,"43,04","42,33",80,5,03:45:11,vibrations,,,,,,,,
+DAY 3,,,,,,,,,,,,,,,,,,,,,,,,
+acq060,,Hexagonal ice,RIXS,535.5 eV,523,100000,80,"80,22","80,93",50,"43,04","42,33",80,5,08:29:33,valence - didnt realise we had this one already,,,,,,,,
+acq061,,Hexagonal ice,RIXS,537.5 eV,523,400000,80,"80,22","80,93",50,"43,04","42,33",80,5,08:29:33,valence,,,,,,,,
+acq062,,Hexagonal ice,RIXS,538 eV,523,400000,80,"80,22","80,93",50,"43,04","42,33",80,5,08:29:33,valence,,,,,,,,
+acq063,,Hexagonal ice ,RIXS - energy scale,533 532 531,523,,,,,,,,,,,,,,,,,,,
+entry13550,,Hexagonal ice (D2O),XAS,,,,80,,,,,,,,10:55:34,,,,,,,,,
+New sample - New files: 20221209_1.h5 and 20221209_DLD_1.h5 ,,,,,,,,,,,,,,,,,,,,,,,,
+acq001,,Hexagonal ice (D2O),RIXS,537,533,750000,80,"80,212","81,126",50,"41,047","40,057",80,5,11:09:37,vibrations  - last 1000 seconds are just noise,,,,,,,,
+acq002,,Hexagonal ice (D2O),RIXS,542,533,600000 -  but some is noise at the low energies,80,"80,212","81,126",50,"41,047","40,057",80,5,14:01:00,vibrations,,,,,,,,
+acq003,,Hexagonal ice (D2O),RIXS,"537,5",533,,80,"80,212","81,126",50,"41,047","40,057",80,5,16:04:00,vibrations - lets see if the weird thing is there here too,,,,,,,,
+acq004,,Hexagonal ice (D2O),RIXS,537,523,,80,"79,97","80,757",80,"39,18","38,44",50,5,18:06:48,valence,,,,,,,,
+acq005,,Hexagonal ice (D2O),RIXS,542,523,,80,"79,97","80,757",80,"39,18","38,44",50,5,18:30:45,valence,,,,,,,,
+acq006,,Hexagonal ice (D2O),RIXS,552,523,,80,"79,97","80,757",80,"39,18","38,44",50,5,18:52:56,valence,,,,,,,,
+acq007,,Hexagonal ice (D2O),RIXS,"533, 532, 531",523,,80,"79,97","80,757",80,"39,18","38,44",50,5,19:16:54,calib,,,,,,,,
+acq008,,Hexagonal ice (D2O),RIXS,539,533,,80,"79,97","80,757",80,"39,18","38,44",50,5,19:25:01,vibrations,,,,,,,,
+acq009,,Hexagonal ice (D2O),RIXS,"535,5",533,,80,"79,97","80,757",80,"39,18","38,44",50,5,9:29:58 PM,vibrations,,,,,,,,
+acq010,,Hexagonal ice (D2O),RIXS,"536,5",533,,80,"79,97","80,757",80,"39,18","38,44",50,5,9:49:49 PM,vibrations,,,,,,,,
+acq011,,Hexagonal ice (D2O),RIXS,538,533,,80,"79,97","80,757",80,"39,18","38,44",50,5,9:49:49 PM,vibrations,,,,,,,,
+acq012,,Hexagonal ice (D2O),RIXS,"535,5",523,,80,"79,97","80,757",80,"39,18","38,44",50,5,,valence,the sample was not moving,,,,,,,
+acq013,,Hexagonal ice (D2O),RIXS,"535,5",523,,80,"79,97","80,757",80,"39,18","38,44",50,5,02:10:50,valence,,,,,,,,
+acq014,,Hexagonal ice (D2O),RIXS,"536,5",523,,80,"79,97","80,757",80,"39,18","38,44",50,5,,valence,,,,,,,,
+acq015,,Hexagonal ice (D2O),RIXS,538,523,,80,"79,97","80,757",80,"39,18","38,44",50,5,04:27:19,valence,,,,,,,,
+acq016,,Hexagonal ice (D2O),RIXS,536,523,,80,"79,97","80,757",80,"39,18","38,44",50,5,04:43:23,valence,,,,,,,,
+acq017,,Hexagonal ice (D2O),RIXS,537,523,,80,"79,97","80,757",80,"39,18","38,44",50,5,04:43:23,valence,,,,,,,,
+acq018,,Hexagonal ice (D2O),RIXS,536,523,,80,"79,97","80,757",80,"39,18","38,44",50,5,06:34:54,valence,,,,,,,,
+acq019,,Hexagonal ice (D2O),RIXS,"535,5",523,,80,"79,97","80,757",80,"39,18","38,44",50,5,07:30:00,valence,,,,,,,,
+entry13555,,Hexagonal ice (D2O),XAS,,,,80,,,,,,,,08:25:28,,,,,,,,,
+acq020,,Hexagonal ice (D2O),RIXS,538,523,,80,"81,839","82,804",80,"41,655","40,727",50,5,08:43:53,valence,,,,,,,,
+acq021,,Hexagonal ice (D2O),RIXS,552,523,,80,"81,839","82,804",80,"41,655","40,727",50,5,09:07:04,valence; beam is gone again,,,,,,,,
+acq022,,Hexagonal ice (D2O),RIXS,552,523,,80,"81,839","82,804",80,"41,655","40,727",50,5,09:32:27,valence,,,,,,,,
+acq023,,Hexagonal ice (D2O),RIXS,542,523,,80,"81,839","82,804",80,"41,655","40,727",50,5,10:19:45,valence,,,,,,,,
+DAY 4,,,,,,,,,,,,,,,,,,,,,,,,
+New sample - New files: 20221210_1.h5 and 20221210_DLD_1.h5 ,,,,,,,,,,,,,,,,,,,,,,,,
+entry13557,,LDA,mesh scan,542,,,80,77,"83,5",20,44,38,50,"0,05",,aborted; bad energy selection,,,,,,,,
+entry13558,,LDA,mesh scan,528,,,80,77,"83,5",20,44,38,50,"0,05",12:40:48,,,,,,,,,
+entry13559,,LDA,mesh scan,531,,,80,77,"83,5",20,44,38,50,"0,05",12:55:23,aborted; not good,,,,,,,,
+entry13560,,LDA,mesh scan,540,,,80,77,"83,5",20,44,38,50,"0,05",13:05:45,,,,,,,,,
+entry13563,,LDA,XAS,,,,80,,,,,,,,13:45:05,,,,,,,,,
+entry13563,,LDA,absorption,,,,,"82,628",,,"40,675",,,,,,,,,,,,,
+entry13564,,LDA,absorption,,,,,"82,108",,,"39,099",,,,13:50:50,,,,,,,,,
+acq000,,LDA,RIXS,552,523,,80,"82,015","83,055",50,"41,296","40,377",80,5,13:58:46,valence,,,,,,,,
+acq001,,LDA,RIXS,542,523,,80,"82,015","83,055",50,"41,296","40,377",80,5,14:54:51,valence,,,,,,,,
+acq002,,LDA,RIXS,539,523,,80,"82,015","83,055",50,"41,296","40,377",80,5,15:55:17,valence,,,,,,,,
+acq003,,LDA,RIXS,537,523,,80,"82,015","83,055",50,"41,296","40,377",80,5,16:56:00,valence,,,,,,,,
+acq004,,LDA,RIXS,533 532 531,523,,80,"82,015","83,055",50,"41,296","40,377",80,5,17:56:46,valence; measure for calibration,,,,,,,,
+acq005,,LDA,RIXS,537,533,,80,"82,015","83,055",50,"41,296","40,377",80,5,18:08:18,vibration,,,,,,,,
+entry13566,,LDA,absorption,,,,,"80,966",,,"42,549",,,,8:14:48 PM,,,,,,,,,
+acq006,,LDA,RIXS,539,533,,80,"80,966","83,055",50,"42,549","40,377",80,5,20:19:38,vibration,,,,,,,,
+acq007,,LDA,RIXS,542,533,,80,"80,966","83,055",50,"42,549","40,377",80,5,00:08:33,vibration,,,,,,,,
+acq008,,,,534 535 536 537 540,,,,,,,,,,,,"calibration, but not good",,,,,,,,
+acq009,,LDA,RIXS,542,533,,80,"80,966","83,055",50,"42,549","40,377",80,5,00:14:31,vibration,,,,,,,,
+acq010,,LDA,RIXS,552,533,,80,"80,966","83,055",50,"42,549","40,377",80,5,03:46:00,vibration,,,,,,,,
+DAY 5,,,,,,,,,,,,,,,,,,,,,,,,
+acq011,,LDA,RIXS,538,533,,80,"80,966","83,055",50,"42,549","40,377",80,5,08:05:13,vibration,,,,,,,,
+entry13569,,LDA,XAS,,,,80,"81,327",,,"42,74",,,,10:04:56,,,,,,,,,
+acq012,,LDA,RIXS,"537,5",533,,80,"81,343","81,729",25,"42,662","41,68",80,5,10:10:14,vibration,,,,,,,,
+acq013,,LDA,RIXS,"527,9",523,,80,"81,343","81,729",25,"42,662","41,68",80,5,12:11:52,vibration,,,,,,,,
+entry13571,,Hexagonal ice (H2O),mesh scan,540,,,80,77,"83,5",20,44,38,50,"0,05",,,,,,,,,,
+New sample - New files: 20221211_1.h5 and 20221211_DLD_1.h5 ,,,,,,,,,,,,,,,,,,,,,,,,
+entry13572,,Hexagonal ice (H2O),XAS,,,,80,"80,798",,,"40,989",,,,13:58:39,,,,,,,,,
+acq014,,Hexagonal ice (H2O),RIXS,552,523,,80,"80,337","81,2",50,"41,48","40,638",80,5,,aborted; no counts and did not create new file,,,,,,,,
+acq000,,Hexagonal ice (H2O),RIXS,552,523,,80,"80,337","81,2",50,"41,48","40,638",80,5,14:08:54,"valence, beam dumped at last 10 mins of measurement",,,,,,,,
+acq001,,Hexagonal ice (H2O),RIXS,552,523,,80,"80,337","81,2",50,"41,48","40,638",80,5,15:25:46,"valence, did not open the valve in the upstream",,,,,,,,
+acq002,,Hexagonal ice (H2O),RIXS,552,523,,80,"80,337","81,2",50,"41,48","40,638",80,5,15:26:16,valence,,,,,,,,
+acq003,,Hexagonal ice (H2O),RIXS,542,523,,80,"80,337","81,2",50,"41,48","40,638",80,5,16:04:33,valence,,,,,,,,
+acq004,,Hexagonal ice (H2O),RIXS,537,523,,80,"80,337","81,2",50,"41,48","40,638",80,5,17:05:18,valence,,,,,,,,
+acq005,,Hexagonal ice (H2O),RIXS,539,523,,80,"80,337","81,2",50,"41,48","40,638",80,5,18:07:37,valence,,,,,,,,
+acq006,,Hexagonal ice (H2O),RIXS,"537,5",523,,80,"80,337","81,2",50,"41,48","40,638",80,5,19:09:17,valence,,,,,,,,
+acq007,,Hexagonal ice (H2O),RIXS,538,523,,80,"80,337","81,2",50,"41,48","40,638",80,5,20:09:37,valence,,,,,,,,
+acq008,,Hexagonal ice (H2O),RIXS,"536,5",523,,80,"80,337","81,2",50,"41,48","40,638",80,5,21:06:32,valence,,,,,,,,
+entry13576,,LDA,mesh scan,540,,,80,77,"83,5",20,44,38,50,"0,05",11:21:52 PM,,,,,,,,,
+entry13577,,LDA,XAS,,,,80,"82,02",,,"40,16",,,,23:38:55,,,,,,,,,
+acq009,,LDA,RIXS,"536,5",523,,80,"82,03","82,95",50,"40,16","39,48",80,5,23:43:59,valence,,,,,,,,
+acq010,,LDA,RIXS,"537,5",533,,80,"82,03","82,95",50,"40,16","39,48",80,5,23:59:49,vibration,,,,,,,,
+acq011,,LDA,RIXS,538,533,,80,"82,03","82,95",50,"40,16","39,48",80,5,02:00roughly,vibration,,,,,,,,
+acq012,,LDA,RIXS,542,533,,80,"82,03","82,95",50,"40,16","39,48",80,5,03:57,vibration,,,,,,,,
+acq013,,LDA,RIXS,539,533,,80,"80,747","81,653",50,"38,895","38,006",80,5,05:45,vibration,no sample,,,,,,,
+acq014,,LDA,RIXS,539,533,,80,"81,611","82,04",25,"41,085","40,173",70,5,06:08,vibration,no sample,,,,,,,
+entry13581,,LDA,XAS,,,,80,"81,817",,,"41,059",,,,06:15:07,,,,,,,,,
+entry13583,,LDA,XAS,,,,80,"82,676",,,"41,763",,,,06:15:07,,,,,,,,,
+entry13584,,LDA,XAS,,,,80,"81,066",,,"41,42",,,,6:22:15 AM,,,,,,,,,
+acq015,,LDA,RIXS,542,533,,80,"80,999","81,477",25,"41,482","40,578",70,5,06:24,vibration,,,,,,,,
+entry13586,,LDA,,,,,80,"81,28587",,,"41,13329",,,,07:30,absorption,,,,,,,,
+acq016,,LDA,RIXS,550,523,,,"81,28587",,,41.13329 ->41.11 at 600 seconds,,,,07:35,to see if not moving makes hexagonal ice - wrong energy :(,,,,,,,,
+acq017,,LDA,RIXS,552,523,,,"81,28587",,,"41,09",,,,07:35,to see if not moving makes hexagonal ice,,,,,,,,
