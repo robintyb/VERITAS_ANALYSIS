@@ -1,0 +1,34 @@
+# --- Local, per-user configuration (never commit) ---
+config.local.toml
+
+# --- Raw / large data: lives on disk or the MAX IV storage, not in git ---
+*.h5
+*.hdf5
+*.nxs
+data/
+raw/
+
+# --- Generated output ---
+outputs/
+figures/
+*.png
+*.pdf
+*.svg
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- OS / editors ---
+.DS_Store
+.vscode/
+.idea/
+~$*.xlsx
