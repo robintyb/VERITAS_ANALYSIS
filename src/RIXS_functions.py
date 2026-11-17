@@ -1,3 +1,4 @@
+import bisect
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
@@ -69,6 +70,23 @@ runinfo_d22=pd.read_csv(RUNINFO/'runinfo-Table 1.csv')
 runinfo_f24=pd.read_excel(RUNINFO/'VERITAS FEB 2024 - runinfo.xlsx')
 runinfo_m24=pd.read_excel(RUNINFO/'Veritas water jet vol 2 03-2024 .xlsx')
 
+_RUNINFO = {'d22': runinfo_d22, 'm23': runinfo_m23, 'f24': runinfo_f24, 'm24': runinfo_m24}
+
+# First run-table row of each DLD file. A file covers rows up to the next entry's row.
+_DLD_FILES = {
+    'd22': [(0, '20221207_DLD_1.h5'), (68, '20221209_DLD_1.h5'),
+            (94, '20221210_DLD_1.h5'), (120, '20221211_DLD_1.h5')],
+    'm23': [(0, '20230329_DLD_1.h5'), (27, '20230330_DLD_1.h5'),
+            (37, '20230401_DLD_1.h5'), (55, '20230401_DLD_2.h5'),
+            (95, '20230404_DLD_1.h5'), (105, '20230405_DLD_1.h5'),
+            (114, '20230405_DLD_2.h5'), (134, '20230407_DLD_1.h5')],
+    'f24': [(0, '20240220_DLD1.h5'), (56, 'testdld.h5')],
+    # row 26 is the "filepath changed to 20240309_dld1.h5" note, so acq120 (row 25) is in the first file
+    'm24': [(0, '20240307_DLD1.h5'), (26, '20240309_DLD1.h5')],
+}
+
+assert set(BEAMTIMES) == set(_RUNINFO) == set(_DLD_FILES), 'every beamtime needs a run table and a DLD file table'
+
 #I will calibrate these all in a way so that the O2 absorption is 531.2 eV
 # (the shifts below are applied on load; see energy_scales/index.toml)
 
@@ -119,6 +137,14 @@ Step by step:
 """
 
 
+def _position(metadata, name):
+    """A motor position from start/end metadata, or nan if the DAQ recorded none."""
+    try:
+        return float(np.array(metadata[name]['position']))
+    except (KeyError, ValueError, TypeError):
+        return np.nan
+
+
 class RIXS_run:
     def __init__(self,filename, run_number,index=np.nan, **kwargs):
 
@@ -130,7 +156,7 @@ class RIXS_run:
         runinfo_name=kwargs['runinfo'].lower()
         if runinfo_name in BEAMTIMES:
             self.marker=runinfo_name
-            self.runinfo={'d22':runinfo_d22,'m23':runinfo_m23,'f24':runinfo_f24,'m24':runinfo_m24}[runinfo_name]
+            self.runinfo=_RUNINFO[runinfo_name]
         elif '24' in runinfo_name:
             if 'eb' in runinfo_name:
                 self.runinfo=runinfo_f24
@@ -161,18 +187,15 @@ class RIXS_run:
         self.arm_energy=np.nan
         self.beamline_energy=np.nan
         with h5py.File(filename) as file:
-            try:
-                self.arm_energy=float(np.array(file[run_number]['startmetadata']['veritasarm_energy']['position']))
-                self.beamline_energy=float(np.array(file[run_number]['startmetadata']['beamline_energy']['position']))
-            except KeyError:
-                pass
+            metadata = file[run_number].get('startmetadata', {})
+            self.arm_energy = _position(metadata, 'veritasarm_energy')
+            self.beamline_energy = _position(metadata, 'beamline_energy')
     def print_information(self):
-        file1 = rixsaqlib.dldfile.DLDFile(self.filename, self.run_number)
-        with h5py.File(file1.hdf5filename, "r") as f:
-            arme = f[self.run_number]["startmetadata/veritasarm_energy/position"][()]
-            slit = f[self.run_number]["startmetadata/a_slit1_v/position"][()]
-            beamline = f[self.run_number]["startmetadata/beamline_energy/position"][()]
-            print("{},  Beamline energy: {:.2f} eV, Slit: {:.2f}, Arm energy: {:.2f} eV".format(self.run_number,beamline,slit,arme))
+        with h5py.File(self.filename, 'r') as f:
+            metadata = f[self.run_number]['startmetadata']
+            print('{},  Beamline energy: {:.2f} eV, Slit: {:.2f}, Arm energy: {:.2f} eV'.format(
+                self.run_number, _position(metadata, 'beamline_energy'),
+                _position(metadata, 'a_slit1_v'), _position(metadata, 'veritasarm_energy')))
         
     def initialise_calib_indices(self,runinfo):
         pass
@@ -318,56 +341,17 @@ def filter_samples(excitation_energy,**kwargs):
 
 def load_from_index(index,**kwargs):
     """ choose d22, m23, f24 or m24 as runinfo,"""
-
-    if kwargs.get('runinfo') not in BEAMTIMES:
+    beamtime = kwargs.get('runinfo')
+    if beamtime not in BEAMTIMES:
         raise ValueError(f'specify runinfo as one of {BEAMTIMES}')
-
-    if kwargs['runinfo']=='d22':
-        basepath=raw_data_dir('d22')
-        files=[basepath/'20221207_DLD_1.h5',basepath/'20221209_DLD_1.h5',
-               basepath/'20221210_DLD_1.h5',basepath/'20221211_DLD_1.h5']
-        index_cutoffs=[0,68,94,120,9999]
-        runinfo_file=runinfo_d22
-    
-    if kwargs['runinfo']=='m23':
-        basepath=raw_data_dir('m23')
-        file1=basepath/'20230401_DLD_2.h5'
-        file2=basepath/'20230404_DLD_1.h5'
-        file3=basepath/'20230405_DLD_2.h5'
-        file4=basepath/'20230407_DLD_1.h5'
-        files=[file1,file2,file3,file4]
-        index_cutoffs=[0,95,105,134,9999]
-        runinfo_file=runinfo_m23
-
-    if kwargs['runinfo']=='f24':
-        basepath=raw_data_dir('f24')
-        index_cutoffs=[0,56,9999]
-        files=[basepath/'20240220_DLD1.h5',basepath/'testdld.h5']
-        runinfo_file=runinfo_f24
-    
-    if kwargs['runinfo']=='m24':
-        basepath=raw_data_dir('m24')
-        # row 26 is the "filepath changed to 20240309_dld1.h5" note, so acq120 (row 25) is in the first file
-        index_cutoffs=[0,26,9999]
-        files=[basepath/'20240307_DLD1.h5',basepath/'20240309_DLD1.h5']
-        runinfo_file=runinfo_m24
-
-    # each cutoff is the first row of the next file (the "file changed" note row)
-    filename=None
-    for v,thing in enumerate(index_cutoffs[:-1]):
-        if thing<=index<index_cutoffs[v+1]:
-            filename=files[v]
-    if filename is None:
-        raise IndexError(f'row {index} is outside the {kwargs["runinfo"]} file ranges {index_cutoffs}')
-    """
-    if index:
-        filename=file1
-    if index>113:
-        filename=file2
-    if index>134:
-        filename=file3
-    """
-    return RIXS_run(str(filename),runinfo_file.loc[index]['Run name'],index=index,runinfo=kwargs['runinfo'])
+    segments = _DLD_FILES[beamtime]
+    first_rows = [first for first, _ in segments]
+    if index < first_rows[0]:
+        raise IndexError(f'row {index} is before the first {beamtime} file')
+    name = segments[bisect.bisect_right(first_rows, index) - 1][1]
+    filename = raw_data_dir(beamtime) / name
+    return RIXS_run(str(filename), _RUNINFO[beamtime].loc[index]['Run name'],
+                    index=index, runinfo=beamtime)
 
 #I think I can just write a function that averages RIXS_runs and returns a new one
 
