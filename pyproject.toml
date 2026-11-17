@@ -31,3 +31,6 @@ packages = ["rixsaqlib"]
 # point it at the source dirs directly (extern/ contains the rixsaqlib package).
 [tool.pyright]
 extraPaths = ["src", "extern"]
+
+[tool.ty.environment]
+extra-paths = ["src", "extern"]
