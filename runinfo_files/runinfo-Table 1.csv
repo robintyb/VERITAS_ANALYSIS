@@ -1,5 +1,4 @@
-Run name;Sample name;Type of ice;RIXS or XAS;Veritas beamline energy (eV);X-ray energy (eV) Veritasrm_energy;Total counts;Temperature (K);x coordinates (start);x coordinates (end);x-steps;y coordinates (start);y coordinates (end);y-steps;integration time (s);"time start 
-(shift+option+command+;)";Long Comment;;;;;;;;
+Run name;Sample name;Type of ice;RIXS or XAS;Veritas beamline energy (eV);X-ray energy (eV) Veritasrm_energy;Total counts;Temperature (K);x coordinates (start);x coordinates (end);x-steps;y coordinates (start);y coordinates (end);y-steps;integration time (s);"time start (shift+option+command+;)";Long Comment;;;;;;;;
 DAY 1;;;;;;;;;;;;;;;;;;;;;;;;
 entry13520;;;XAS;;;;;;;;;;;;;Data was temporarily saved in /data/staff/veritas/temp_comissioning_folder/2022/w49 . we need to find a more permanent solution to that;;;;;;;;
 acq005;;Hexagonal ice;RIXS;536 eV;533;;80;81,5;82,5;80;42,14;41,24;50;5;16:50;vibrations;;;;;;;;
