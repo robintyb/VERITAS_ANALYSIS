@@ -66,7 +66,7 @@ runinfo_f24=pd.read_excel(RUNINFO/'VERITAS FEB 2024 - runinfo.xlsx')
 runinfo_m24=pd.read_excel(RUNINFO/'Veritas water jet vol 2 03-2024 .xlsx')
 
 #I will calibrate these all in a way so that the O2 absorption is 531.2 eV
-# (the shifts below are applied on load; see energy_scales/index.csv)
+# (the shifts below are applied on load; see energy_scales/index.toml)
 
 shift_m23=-1.14213434
 shift_f24=-1
@@ -226,7 +226,7 @@ class RIXS_run:
         self.corrected_spectrum=self.corrected_spectrum/np.trapz(self.corrected_spectrum,x=self.energy_scale)
     def load_energy_scale(self,offset=0):
         #Set calibration indices based on file
-        assert self.index, 'specify index first'
+        assert not np.isnan(self.index), 'specify index first'
 
         if self.marker=='m23':
             self.energy_scale=escale_m23_1
@@ -254,8 +254,8 @@ class RIXS_run:
         """
         
     def get_excitation_energy(self):
-        if self.index:
-            self.excitation_energy=runinfo.iloc[self.index]['Veritas beamline energy (eV)']
+        if not np.isnan(self.index):
+            self.excitation_energy=self.runinfo.iloc[int(self.index)]['Veritas beamline energy (eV)']
 
     def fourier_correction(self,frequency=0.1):
         if frequency:

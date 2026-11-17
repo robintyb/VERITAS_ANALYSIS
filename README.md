@@ -6,7 +6,7 @@
 |---|---|
 | `src/` | Shared analysis code (installed as a package, see below) |
 | `analysis_notebooks/<your-name>/` | Your own notebooks. Don't edit someone else's notebook: copy it into your own folder. |
-| `energy_scales/` | Energy calibrations (`.npy`). **Never overwrite one.** Add a new file and register it in `energy_scales/index.csv` |
+| `energy_scales/` | Energy calibrations (`.npy`). **Never overwrite one.** `energy_scales/index.toml` says which runs use which file |
 | `runinfo_files/` | Run tables. The code reads the `.csv`; the `.xlsx` files are read-only |
 
 Raw data (`.h5`) is **not** stored in the repository.
