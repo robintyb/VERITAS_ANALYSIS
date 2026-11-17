@@ -1,0 +1,12 @@
+# Copy this file to `config.local.toml` (same folder) and edit the paths.
+# config.local.toml is git-ignored, so everyone keeps their own.
+#
+# Each entry is the folder that contains the raw *_DLD*.h5 files
+# for that beamtime.
+
+[raw_data]
+d22 = "/path/to/VERITAS_DEC_2022/raw"     # December 2022
+m23 = "/path/to/VERITAS_MAR_2023/raw"     # March 2023
+f24 = "/path/to/VERITAS_FEB_2024/raw"     # February 2024
+m24 = "/path/to/VERITAS_MAR_2024/raw"     # March 2024
+# new = "/data/visitors/veritas/<proposal>/<visit>/raw"   # upcoming beamtime

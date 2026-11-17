@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "veritas-analysis"
+version = "0.1.0"
+description = "Analysis code for RIXS spectra from VERITAS (MAX IV)"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "openpyxl",     # pandas needs it to read the .xlsx run tables
+    "h5py",
+    "matplotlib",
+    "lmfit",
+]
+# NOTE: rixsaqlib (VERITAS DLD reader) is not on PyPI and must be installed
+# separately - see README.
+
+[project.optional-dependencies]
+dev = ["jupyterlab", "ipykernel", "nbstripout", "pre-commit"]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+py-modules = ["RIXS_functions", "fitting_functions", "veritas_paths"]

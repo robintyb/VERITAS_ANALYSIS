@@ -9,6 +9,8 @@ import rixsaqlib.dlddata
 import pandas as pd
 import lmfit
 from copy import deepcopy
+import warnings
+from veritas_paths import ENERGY_SCALES, RUNINFO, raw_data_dir
 
 def split_spectrum(filep,acnr,provide_cutoff=False,**kwargs):
     #The spectra are not background corrected yet. 
@@ -58,23 +60,29 @@ def split_spectrum(filep,acnr,provide_cutoff=False,**kwargs):
     
     return spec_low,spec_high,beamline_energy
 
-runinfo_m23=pd.read_excel('/Users/robintyburski/VERITAS_MAR_2023/Veritas jet march 2023 - runinfo-2.xlsx')
-runinfo_d22=pd.read_csv('/Users/robintyburski/VERITAS22/Veritas_dec_22_runinfo/runinfo-Table 1.csv',sep=';')
-runinfo_f24=pd.read_excel('/Users/robintyburski/VERITAS_MAR_2024/VERITAS FEB 2024 - runinfo.xlsx')
-runinfo_m24=pd.read_excel('/Users/robintyburski/VERITAS_MAR_2024/Veritas water jet vol 2 03-2024 .xlsx')
+runinfo_m23=pd.read_excel(RUNINFO/'Veritas jet march 2023 - runinfo-2.xlsx')
+runinfo_d22=pd.read_csv(RUNINFO/'runinfo-Table 1.csv',sep=';')
+runinfo_f24=pd.read_excel(RUNINFO/'VERITAS FEB 2024 - runinfo.xlsx')
+runinfo_m24=pd.read_excel(RUNINFO/'Veritas water jet vol 2 03-2024 .xlsx')
 
 #I will calibrate these all in a way so that the O2 absorption is 531.2 eV
+# (the shifts below are applied on load; see energy_scales/index.csv)
 
-escale_path='/Users/robintyburski/RIXS_escales/'
 shift_m23=-1.14213434
 shift_f24=-1
 
-escale_m23_1=np.load(f'{escale_path}escale_m23_1.npy')-shift_m23
-escale_f24_1=np.load(f'{escale_path}escale_f24_1.npy')-shift_f24
-escale_f24_2=np.load(f'{escale_path}escale_f24_2.npy')-shift_f24
-escale_m24_1=np.load(f'{escale_path}escale_m24_1.npy')-shift_f24+0.4
+escale_m23_1=np.load(ENERGY_SCALES/'escale_m23_1.npy')-shift_m23
+escale_f24_1=np.load(ENERGY_SCALES/'escale_f24_1.npy')-shift_f24
+escale_f24_2=np.load(ENERGY_SCALES/'escale_f24_2.npy')-shift_f24
+escale_m24_1=np.load(ENERGY_SCALES/'escale_m24_1.npy')-shift_f24+0.4
 
-escale_d22=np.load('/Users/robintyburski/VERITAS_MAR_2023/escale_ice_whole_detector.npy')-2.4+1.62
+# Not yet committed to the repo - load it if someone adds it to energy_scales/
+_escale_d22_file=ENERGY_SCALES/'escale_ice_whole_detector.npy'
+if _escale_d22_file.exists():
+    escale_d22=np.load(_escale_d22_file)-2.4+1.62
+else:
+    escale_d22=None
+    warnings.warn(f'{_escale_d22_file.name} not found in energy_scales/; d22 energy scale unavailable.')
 
 
 
@@ -296,32 +304,32 @@ def load_from_index(index,**kwargs):
     """ choose d22, m23, f24 or m24 as runinfo,"""
 
     if kwargs['runinfo']=='d22':
-        basepath='/Users/robintyburski/VERITAS_MAR_2023/December2022/'
-        files=[f'{basepath}20221207_DLD_1.h5',f'{basepath}20221209_DLD_1.h5',
-               f'{basepath}20221210_DLD_1.h5',f'{basepath}20221211_DLD_1.h5']
+        basepath=raw_data_dir('d22')
+        files=[basepath/'20221207_DLD_1.h5',basepath/'20221209_DLD_1.h5',
+               basepath/'20221210_DLD_1.h5',basepath/'20221211_DLD_1.h5']
         index_cutoffs=[0,68,94,120,9999]
         runinfo_file=runinfo_d22
     
     if kwargs['runinfo']=='m23':
-        basepath='/Users/robintyburski/VERITAS_MAR_2023/raw/'
-        file1=f'{basepath}20230401_DLD_2.h5'
-        file2=f'{basepath}20230404_DLD_1.h5'
-        file3=f'{basepath}20230405_DLD_2.h5'
-        file4=f'{basepath}20230407_DLD_1.h5'
+        basepath=raw_data_dir('m23')
+        file1=basepath/'20230401_DLD_2.h5'
+        file2=basepath/'20230404_DLD_1.h5'
+        file3=basepath/'20230405_DLD_2.h5'
+        file4=basepath/'20230407_DLD_1.h5'
         files=[file1,file2,file3,file4]
         index_cutoffs=[0,95,105,134,9999]
         runinfo_file=runinfo_m23
 
     if kwargs['runinfo']=='f24':
-        basepath='/Users/robintyburski/VERITAS_MAR_2024/'
+        basepath=raw_data_dir('f24')
         index_cutoffs=[0,56,9999]
-        files=[f'{basepath}raw/20240220_DLD1.h5',f'{basepath}raw/testdld.h5']
+        files=[basepath/'20240220_DLD1.h5',basepath/'testdld.h5']
         runinfo_file=runinfo_f24
     
     if kwargs['runinfo']=='m24':
-        basepath='/Users/robintyburski/VERITAS_MAR_2024/'
+        basepath=raw_data_dir('m24')
         index_cutoffs=[0,25,9999]
-        files=[f'{basepath}raw/20240307_DLD1.h5',f'{basepath}raw/20240309_DLD1.h5']
+        files=[basepath/'20240307_DLD1.h5',basepath/'20240309_DLD1.h5']
         runinfo_file=runinfo_m24
         
 
@@ -336,7 +344,7 @@ def load_from_index(index,**kwargs):
     if index>134:
         filename=file3
     """
-    return RIXS_run(filename,runinfo_file.loc[index]['Run name'],index=index,runinfo=kwargs['runinfo'])
+    return RIXS_run(str(filename),runinfo_file.loc[index]['Run name'],index=index,runinfo=kwargs['runinfo'])
 
 #I think I can just write a function that averages RIXS_runs and returns a new one
 
