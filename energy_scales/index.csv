@@ -3,4 +3,3 @@ escale_m23_1.npy,m23 (Mar 2023),all (rows <113 get an extra +1 eV),+1.14213434,O
 escale_f24_1.npy,f24 (Feb 2024),rows <56,+1.0,O2 absorption at 531.2 eV,in use,offset applied in RIXS_functions.py (shift_f24); row 56 itself currently gets no scale
 escale_f24_2.npy,f24 (Feb 2024),rows >56,+1.0,O2 absorption at 531.2 eV,in use,
 escale_m24_1.npy,m24 (Mar 2024),all,+1.4,O2 absorption at 531.2 eV,in use,shift_f24 plus extra +0.4 eV
-escale_ice_whole_detector.npy,d22 (Dec 2022),all,-0.78,,NOT IN REPO,still only on Robin's machine; offset is -2.4+1.62
