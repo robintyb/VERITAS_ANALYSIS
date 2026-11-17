@@ -7,7 +7,7 @@
 | `src/` | Shared analysis code (installed as a package, see below) |
 | `analysis_notebooks/<your-name>/` | Your own notebooks. Don't edit someone else's notebook: copy it into your own folder. |
 | `energy_scales/` | Energy calibrations (`.npy`). **Never overwrite one.** Add a new file and register it in `energy_scales/index.csv` |
-| `runinfo_files/` | Run tables (`.xlsx` / `.csv`) |
+| `runinfo_files/` | Run tables. The code reads the `.csv`; the `.xlsx` files are read-only |
 
 Raw data (`.h5`) is **not** stored in the repository.
 
@@ -34,9 +34,9 @@ import RIXS_functions as rf
 import fitting_functions as ff
 ```
 
-With an editable install and autoreload, a `git pull` takes effect without
-restarting the kernel. If you change module-level variables, restart the
-kernel anyway.
+With an editable install and autoreload, new code from `main` takes effect
+without restarting the kernel. If module-level variables changed, restart
+the kernel.
 
 ## Working together
 
