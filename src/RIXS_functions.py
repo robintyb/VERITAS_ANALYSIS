@@ -5,11 +5,16 @@ from scipy.optimize import curve_fit
 import pandas as pd
 import rixsaqlib.dldfile
 import rixsaqlib.dlddata
-import pandas as pd
 import lmfit
 from copy import deepcopy
 import warnings
 from veritas_paths import ENERGY_SCALES, RUNINFO, raw_data_dir
+
+BEAMTIMES=('d22','m23','f24','m24')
+
+def rolling_avg(data,kernel_size):
+    kernel = np.ones(kernel_size) / kernel_size
+    return np.convolve(data, kernel, mode='same')
 
 def split_spectrum(filep,acnr,provide_cutoff=False,**kwargs):
     #The spectra are not background corrected yet. 
@@ -119,15 +124,21 @@ class RIXS_run:
 
 
         #this bit is so that you can determine what runinfo file to use with kwargs
+        if 'runinfo' not in kwargs:
+            raise ValueError(f'specify runinfo as one of {BEAMTIMES}')
         self.marker=''
-        if '24' in kwargs['runinfo'].lower():
-            if 'eb' in kwargs['runinfo'].lower():
+        runinfo_name=kwargs['runinfo'].lower()
+        if runinfo_name in BEAMTIMES:
+            self.marker=runinfo_name
+            self.runinfo={'d22':runinfo_d22,'m23':runinfo_m23,'f24':runinfo_f24,'m24':runinfo_m24}[runinfo_name]
+        elif '24' in runinfo_name:
+            if 'eb' in runinfo_name:
                 self.runinfo=runinfo_f24
                 self.marker='f24'
             else:
                 self.runinfo=runinfo_m24
                 self.marker='m24'
-        elif '23' in kwargs['runinfo'].lower():
+        elif '23' in runinfo_name:
             self.runinfo=runinfo_m23
             self.marker='m23'
         else:
@@ -147,12 +158,13 @@ class RIXS_run:
         self.binsize=1
         self.index=index
         self.excitation_energy=np.nan
+        self.arm_energy=np.nan
+        self.beamline_energy=np.nan
         with h5py.File(filename) as file:
             try:
                 self.arm_energy=float(np.array(file[run_number]['startmetadata']['veritasarm_energy']['position']))
                 self.beamline_energy=float(np.array(file[run_number]['startmetadata']['beamline_energy']['position']))
-
-            except:
+            except KeyError:
                 pass
     def print_information(self):
         file1 = rixsaqlib.dldfile.DLDFile(self.filename, self.run_number)
@@ -214,15 +226,14 @@ class RIXS_run:
         self.energy_scale=np.array(energy_scale)
     
     def rolling_avg(self,kernel_size):
-        kernel = np.ones(kernel_size) / kernel_size
-        self.corrected_spectrum=np.convolve(self.corrected_spectrum, kernel, mode='same')
+        self.corrected_spectrum=rolling_avg(self.corrected_spectrum,kernel_size)
         
     def plot_spectrum(self):
         fig,ax=plt.subplots()
         ax.plot(self.energy_scale,self.corrected_spectrum)
         return fig,ax
     def normalise(self):
-        self.corrected_spectrum=self.corrected_spectrum/np.trapz(self.corrected_spectrum,x=self.energy_scale)
+        self.corrected_spectrum=self.corrected_spectrum/np.trapezoid(self.corrected_spectrum,x=self.energy_scale)
     def load_energy_scale(self,offset=0):
         #Set calibration indices based on file
         assert not np.isnan(self.index), 'specify index first'
@@ -241,8 +252,12 @@ class RIXS_run:
         if self.marker=='m24':
             self.energy_scale=escale_m24_1
         if self.marker=='d22':
+            if escale_d22 is None:
+                raise FileNotFoundError(f'{_escale_d22_file.name} not found in energy_scales/')
             self.energy_scale=escale_d22
-        
+
+        self.energy_scale=self.energy_scale+offset
+
         """
         if self.index<100:
             self.energy_scale=escale_day_6+offset
@@ -254,14 +269,14 @@ class RIXS_run:
         
     def get_excitation_energy(self):
         if not np.isnan(self.index):
-            self.excitation_energy=self.runinfo.iloc[int(self.index)]['Veritas beamline energy (eV)']
+            self.excitation_energy=self.runinfo.loc[int(self.index)]['Veritas beamline energy (eV)']
 
     def fourier_correction(self,frequency=0.1):
         if frequency:
             fft=np.fft.fft(self.corrected_spectrum)
-            freq=np.fft.fftfreq(8192)
+            freq=np.fft.fftfreq(len(self.corrected_spectrum))
             fft[np.where(np.abs(freq)>frequency)]=0
-            self.corrected_spectrum=np.fft.ifft(fft)
+            self.corrected_spectrum=np.fft.ifft(fft).real
 
 def filter_samples(excitation_energy,**kwargs):
     """
@@ -272,6 +287,8 @@ def filter_samples(excitation_energy,**kwargs):
     """
 
     index=np.nan
+    if kwargs.get('runinfo') not in BEAMTIMES:
+        raise ValueError(f'specify runinfo as one of {BEAMTIMES}')
     if 'runinfo' in kwargs:
         if kwargs['runinfo']=='m23':
             sample_valence=deepcopy(runinfo_m23)
@@ -302,6 +319,9 @@ def filter_samples(excitation_energy,**kwargs):
 def load_from_index(index,**kwargs):
     """ choose d22, m23, f24 or m24 as runinfo,"""
 
+    if kwargs.get('runinfo') not in BEAMTIMES:
+        raise ValueError(f'specify runinfo as one of {BEAMTIMES}')
+
     if kwargs['runinfo']=='d22':
         basepath=raw_data_dir('d22')
         files=[basepath/'20221207_DLD_1.h5',basepath/'20221209_DLD_1.h5',
@@ -327,14 +347,18 @@ def load_from_index(index,**kwargs):
     
     if kwargs['runinfo']=='m24':
         basepath=raw_data_dir('m24')
-        index_cutoffs=[0,25,9999]
+        # row 26 is the "filepath changed to 20240309_dld1.h5" note, so acq120 (row 25) is in the first file
+        index_cutoffs=[0,26,9999]
         files=[basepath/'20240307_DLD1.h5',basepath/'20240309_DLD1.h5']
         runinfo_file=runinfo_m24
-        
 
+    # each cutoff is the first row of the next file (the "file changed" note row)
+    filename=None
     for v,thing in enumerate(index_cutoffs[:-1]):
-        if index>thing and index<index_cutoffs[v+1]:
+        if thing<=index<index_cutoffs[v+1]:
             filename=files[v]
+    if filename is None:
+        raise IndexError(f'row {index} is outside the {kwargs["runinfo"]} file ranges {index_cutoffs}')
     """
     if index:
         filename=file1
@@ -348,7 +372,7 @@ def load_from_index(index,**kwargs):
 #I think I can just write a function that averages RIXS_runs and returns a new one
 
 class average_RIXS(RIXS_run):
-    def __init__(self,filename):
+    def __init__(self,filename,runinfo=None):
         self.spectrum=np.array([])
         self.energy_scales=np.array([])
         self.dark=np.array([])
@@ -358,18 +382,18 @@ class average_RIXS(RIXS_run):
         self.run_numbers=[]
         self.filename=filename
         self.indices=[]
-        
-        def load_indices(self,run_numbers):
-            self.run_numbers=np.array(run_numbers)
-        def load_runs(self):
-            self.runs=[super().__init__(self.filename,number,self.indices[v]) for v,number in enumerate(self.run_numbers)]
-        def average_runs(self):
-            pass
-        
-                
-        #def load_energy_scales(self):
-        #    filename=load_frim
-            
+        self.runinfo_name=runinfo
+
+    def load_indices(self,run_numbers):
+        self.run_numbers=np.array(run_numbers)
+    def load_runs(self):
+        self.runs=[RIXS_run(self.filename,number,self.indices[v],runinfo=self.runinfo_name) for v,number in enumerate(self.run_numbers)]
+    def average_runs(self):
+        pass
+
+    #def load_energy_scales(self):
+    #    filename=load_frim
+
 
 
 
