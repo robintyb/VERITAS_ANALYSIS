@@ -1,6 +1,5 @@
 import h5py
 import matplotlib.pyplot as plt
-from dldfile import *
 import numpy as np
 from scipy.optimize import curve_fit
 import pandas as pd
@@ -18,7 +17,7 @@ def split_spectrum(filep,acnr,provide_cutoff=False,**kwargs):
     
     with h5py.File(filep) as file:
         beamline_energy=file[f'{acnr}/endmetadata/beamline_energy/position'][()]
-    file1 = dldfile.DLDFile(filep, acnr)
+    file1 = rixsaqlib.dldfile.DLDFile(filep, acnr)
     points = file1.loadPoints()
     countrate=points[:,3][1:]-points[:,3][:-1]
     countrate=rolling_avg(countrate,512)
