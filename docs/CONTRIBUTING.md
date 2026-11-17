@@ -50,8 +50,8 @@ If something behaves oddly, restart the kernel.
   Once it is set up, you don't need to touch this folder. The other files
   are for older beamtimes and must stay unchanged so old results can be
   reproduced. If the calibration really has to change, add a new file
-  (never overwrite one), register it in `energy_scales/index.csv`, and tell
-  everyone.
+  (never overwrite one), add an entry for it in `energy_scales/index.toml`,
+  and tell everyone.
 
 Changes to run tables and calibrations go through a pull request like
 code. Keep those small and merge them quickly, since others are waiting.

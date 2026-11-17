@@ -5,8 +5,5 @@
 # for that beamtime.
 
 [raw_data]
-d22 = "/path/to/VERITAS_DEC_2022/raw"     # December 2022
-m23 = "/path/to/VERITAS_MAR_2023/raw"     # March 2023
-f24 = "/path/to/VERITAS_FEB_2024/raw"     # February 2024
-m24 = "/path/to/VERITAS_MAR_2024/raw"     # March 2024
-# new = "/data/visitors/veritas/<proposal>/<visit>/raw"   # upcoming beamtime
+#!TODO update path
+n26 = "/data/visitors/veritas/<proposal>/<visit>/raw"   # november 2026 beamtime

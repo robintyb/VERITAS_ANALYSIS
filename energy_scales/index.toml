@@ -1,0 +1,42 @@
+# Which energy scale each run uses, grouped by beamtime key (as in config.local.toml).
+#
+# first_row / last_row: inclusive, 0-based row in that beamtime's runinfo table
+#   (the `index` passed to RIXS_run). No last_row means "to the end".
+# offset_eV: added to the .npy when it is loaded.
+#
+# Never overwrite a .npy; add a new file and a new entry.
+# TODO: generate this file with a script instead of editing it by hand.
+
+[[m23]]
+file      = "escale_m23_1.npy"
+first_row = 0
+last_row  = 112
+offset_eV = 2.14213434
+reference = "O2 absorption at 531.2 eV"
+
+[[m23]]
+file      = "escale_m23_1.npy"
+first_row = 113
+offset_eV = 1.14213434
+reference = "O2 absorption at 531.2 eV"
+
+[[f24]]
+file      = "escale_f24_1.npy"
+first_row = 0
+last_row  = 55
+offset_eV = 1.0
+reference = "O2 absorption at 531.2 eV"
+
+# row 56 currently has no energy scale
+
+[[f24]]
+file      = "escale_f24_2.npy"
+first_row = 57
+offset_eV = 1.0
+reference = "O2 absorption at 531.2 eV"
+
+[[m24]]
+file      = "escale_m24_1.npy"
+first_row = 0
+offset_eV = 1.4
+reference = "O2 absorption at 531.2 eV"
