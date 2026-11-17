@@ -40,4 +40,5 @@ kernel anyway.
 
 ## Working together
 
-A short collaboration guide will be added in `CONTRIBUTING.md`.
+Branches, pull requests, and the rules for shared calibrations and run
+tables are in [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
