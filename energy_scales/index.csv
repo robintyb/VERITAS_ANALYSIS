@@ -1,5 +1,5 @@
-file,beamtime,applies_to_runinfo_rows,offset_added_on_load_eV,reference,status,notes
-escale_m23_1.npy,m23 (Mar 2023),all (rows <113 get an extra +1 eV),+1.14213434,O2 absorption at 531.2 eV,in use,offset applied in RIXS_functions.py (shift_m23)
-escale_f24_1.npy,f24 (Feb 2024),rows <56,+1.0,O2 absorption at 531.2 eV,in use,offset applied in RIXS_functions.py (shift_f24); row 56 itself currently gets no scale
-escale_f24_2.npy,f24 (Feb 2024),rows >56,+1.0,O2 absorption at 531.2 eV,in use,
-escale_m24_1.npy,m24 (Mar 2024),all,+1.4,O2 absorption at 531.2 eV,in use,shift_f24 plus extra +0.4 eV
+file,beamtime,applies_to_runinfo_rows,offset_added_on_load_eV,reference,made_by,added_on,made_with,status,notes
+escale_m23_1.npy,m23 (Mar 2023),all (rows <113 get an extra +1 eV),+1.14213434,O2 absorption at 531.2 eV,Robin Tyburski,2026-09-03,,in use,offset applied in RIXS_functions.py (shift_m23)
+escale_f24_1.npy,f24 (Feb 2024),rows <56,+1.0,O2 absorption at 531.2 eV,Robin Tyburski,2026-09-03,,in use,offset applied in RIXS_functions.py (shift_f24); row 56 itself currently gets no scale
+escale_f24_2.npy,f24 (Feb 2024),rows >56,+1.0,O2 absorption at 531.2 eV,Robin Tyburski,2026-09-03,,in use,
+escale_m24_1.npy,m24 (Mar 2024),all,+1.4,O2 absorption at 531.2 eV,Robin Tyburski,2026-09-03,,in use,shift_f24 plus extra +0.4 eV
