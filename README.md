@@ -25,6 +25,21 @@ cp config.example.toml config.local.toml   # then edit your raw-data paths
 `rixsaqlib` (the VERITAS DLD reader) is not on PyPI. A copy is vendored in
 `extern/rixsaqlib/` and gets installed by the `pip install -e` step above.
 
+### With uv
+
+If you use [uv](https://docs.astral.sh/uv/), skip the venv and pip lines:
+
+```bash
+uv sync --extra dev              # creates .venv, installs uv.lock versions, src/ + rixsaqlib editable
+uv run pre-commit install
+cp config.example.toml config.local.toml
+```
+
+`dev` is an extra, so pass `--extra dev`, not `--group dev`. A plain `uv sync`
+removes the dev tools. Run `uv sync --extra dev` again after pulling
+dependency changes. Either `source .venv/bin/activate` or prefix commands
+with `uv run` (e.g. `uv run jupyter lab`).
+
 In notebooks:
 
 ```python
