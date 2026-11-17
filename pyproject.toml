@@ -26,3 +26,8 @@ dev = ["jupyterlab", "ipykernel", "nbstripout", "pre-commit"]
 package-dir = { "" = "src", "rixsaqlib" = "extern/rixsaqlib" }
 py-modules = ["RIXS_functions", "fitting_functions", "veritas_paths"]
 packages = ["rixsaqlib"]
+
+# Pylance/Pyright can't follow setuptools' editable-install import hook, so
+# point it at the source dirs directly (extern/ contains the rixsaqlib package).
+[tool.pyright]
+extraPaths = ["src", "extern"]
