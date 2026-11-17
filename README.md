@@ -22,8 +22,8 @@ pre-commit install               # strips notebook outputs on every commit
 cp config.example.toml config.local.toml   # then edit your raw-data paths
 ```
 
-`rixsaqlib` (the VERITAS DLD reader) is not on PyPI. Install it separately,
-from the copy provided by the beamline.
+`rixsaqlib` (the VERITAS DLD reader) is not on PyPI. A copy is vendored in
+`extern/rixsaqlib/` and gets installed by the `pip install -e` step above.
 
 In notebooks:
 

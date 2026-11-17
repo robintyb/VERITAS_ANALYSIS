@@ -16,12 +16,13 @@ dependencies = [
     "matplotlib",
     "lmfit",
 ]
-# NOTE: rixsaqlib (VERITAS DLD reader) is not on PyPI and must be installed
-# separately - see README.
+# NOTE: rixsaqlib (VERITAS DLD reader) is not on PyPI; a vendored copy lives
+# in extern/rixsaqlib and is installed alongside the project (see below).
 
 [project.optional-dependencies]
 dev = ["jupyterlab", "ipykernel", "nbstripout", "pre-commit"]
 
 [tool.setuptools]
-package-dir = { "" = "src" }
+package-dir = { "" = "src", "rixsaqlib" = "extern/rixsaqlib" }
 py-modules = ["RIXS_functions", "fitting_functions", "veritas_paths"]
+packages = ["rixsaqlib"]
