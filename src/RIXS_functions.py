@@ -61,7 +61,7 @@ def split_spectrum(filep,acnr,provide_cutoff=False,**kwargs):
     return spec_low,spec_high,beamline_energy
 
 runinfo_m23=pd.read_excel(RUNINFO/'Veritas jet march 2023 - runinfo-2.xlsx')
-runinfo_d22=pd.read_csv(RUNINFO/'runinfo-Table 1.csv',sep=';')
+runinfo_d22=pd.read_csv(RUNINFO/'runinfo-Table 1.csv')
 runinfo_f24=pd.read_excel(RUNINFO/'VERITAS FEB 2024 - runinfo.xlsx')
 runinfo_m24=pd.read_excel(RUNINFO/'Veritas water jet vol 2 03-2024 .xlsx')
 
