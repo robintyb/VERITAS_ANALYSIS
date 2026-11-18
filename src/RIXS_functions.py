@@ -1,4 +1,5 @@
 import bisect
+from veritas_paths import ENERGY_SCALES, RUNINFO, raw_data_dir  # before h5py, see veritas_paths
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,7 +10,6 @@ import rixsaqlib.dlddata
 import lmfit
 from copy import deepcopy
 import warnings
-from veritas_paths import ENERGY_SCALES, RUNINFO, raw_data_dir
 
 BEAMTIMES=('d22','m23','f24','m24')
 
@@ -21,7 +21,7 @@ def split_spectrum(filep,acnr,provide_cutoff=False,**kwargs):
     #The spectra are not background corrected yet. 
     #That doesn't make that much of a difference but is something to fix later on.
     
-    with h5py.File(filep) as file:
+    with h5py.File(filep, 'r', locking=False) as file:
         beamline_energy=file[f'{acnr}/endmetadata/beamline_energy/position'][()]
     file1 = rixsaqlib.dldfile.DLDFile(filep, acnr)
     points = file1.loadPoints()
@@ -152,24 +152,12 @@ class RIXS_run:
         #this bit is so that you can determine what runinfo file to use with kwargs
         if 'runinfo' not in kwargs:
             raise ValueError(f'specify runinfo as one of {BEAMTIMES}')
-        self.marker=''
-        runinfo_name=kwargs['runinfo'].lower()
-        if runinfo_name in BEAMTIMES:
-            self.marker=runinfo_name
-            self.runinfo=_RUNINFO[runinfo_name]
-        elif '24' in runinfo_name:
-            if 'eb' in runinfo_name:
-                self.runinfo=runinfo_f24
-                self.marker='f24'
-            else:
-                self.runinfo=runinfo_m24
-                self.marker='m24'
-        elif '23' in runinfo_name:
-            self.runinfo=runinfo_m23
-            self.marker='m23'
-        else:
-            self.runinfo=runinfo_d22
-            self.marker='d22'
+        runinfo_name=str(kwargs['runinfo']).lower()
+        if runinfo_name not in _RUNINFO:
+            raise ValueError(f"unknown runinfo {kwargs['runinfo']!r}; known: {BEAMTIMES}. "
+                             "For n26 and later use daq.load_acq(day, acq).")
+        self.marker=runinfo_name
+        self.runinfo=_RUNINFO[runinfo_name]
 
         #now come the calibration files. let's start with f24 because that is most solid. Then we define all other scales with the help of that 
         #one.
@@ -186,12 +174,12 @@ class RIXS_run:
         self.excitation_energy=np.nan
         self.arm_energy=np.nan
         self.beamline_energy=np.nan
-        with h5py.File(filename) as file:
+        with h5py.File(filename, 'r', locking=False) as file:
             metadata = file[run_number].get('startmetadata', {})
             self.arm_energy = _position(metadata, 'veritasarm_energy')
             self.beamline_energy = _position(metadata, 'beamline_energy')
     def print_information(self):
-        with h5py.File(self.filename, 'r') as f:
+        with h5py.File(self.filename, 'r', locking=False) as f:
             metadata = f[self.run_number]['startmetadata']
             print('{},  Beamline energy: {:.2f} eV, Slit: {:.2f}, Arm energy: {:.2f} eV'.format(
                 self.run_number, _position(metadata, 'beamline_energy'),

@@ -5,8 +5,14 @@ relative to the repository root, so they work on every machine.
 Raw data locations differ per user and are read from `config.local.toml`
 at the repository root (see `config.example.toml`).
 """
+import os
 from pathlib import Path
 import tomllib
+
+# The DAQ appends to the current RIXS file while people analyse it, and
+# rixsaqlib opens files itself. HDF5 reads this only when h5py is first
+# imported, so modules that use h5py import veritas_paths before it.
+os.environ.setdefault("HDF5_USE_FILE_LOCKING", "FALSE")
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ENERGY_SCALES = REPO_ROOT / "energy_scales"

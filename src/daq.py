@@ -1,0 +1,145 @@
+"""Reading the per-session DAQ files of current beamtimes (n26 onwards).
+
+Raw files are `<prefix>_<day>_RIXS.h5` (groups `acq0..acqN`) and
+`<prefix>_<day>_Scan.h5` (groups `entryNNNNN`) in `raw_data_dir(beamtime)`.
+`day` is the YYYYMMDD in the file name. A file is one DAQ session and can
+run past midnight, so an acquisition is identified by (day, acq).
+
+The DAQ appends to the RIXS file while people analyse it, so every file is
+opened read-only without HDF5 file locking.
+"""
+from __future__ import annotations
+
+import warnings
+from datetime import datetime
+from functools import cache
+from pathlib import Path
+
+from veritas_paths import raw_data_dir, runlog_csv  # before h5py, see veritas_paths
+
+import h5py
+import numpy as np
+import pandas as pd
+
+from spectrum import Spectrum
+
+
+def open_h5(path) -> h5py.File:
+    return h5py.File(path, "r", locking=False)
+
+
+def _daq_file(beamtime: str, day, kind: str) -> Path:
+    folder = raw_data_dir(beamtime)
+    matches = sorted(folder.glob(f"*_{day}_{kind}.h5"))
+    if len(matches) != 1:
+        found = ", ".join(m.name for m in matches) or "none"
+        raise FileNotFoundError(f"expected one *_{day}_{kind}.h5 in {folder}, found {found}")
+    return matches[0]
+
+
+def rixs_file(day, beamtime: str = "n26") -> Path:
+    return _daq_file(beamtime, day, "RIXS")
+
+
+def scan_file(day, beamtime: str = "n26") -> Path:
+    return _daq_file(beamtime, day, "Scan")
+
+
+def days(beamtime: str = "n26") -> list[str]:
+    """The `day` of every RIXS file in the beamtime's raw-data folder."""
+    return sorted(p.name.split("_")[-2] for p in raw_data_dir(beamtime).glob("*_RIXS.h5"))
+
+
+def _position(group, name):
+    try:
+        return float(group[f"{name}/position"][()])
+    except KeyError:
+        return np.nan
+
+
+def _time(group, name):
+    if name not in group:
+        return None
+    return datetime.fromisoformat(group[name][()].decode())
+
+
+def _acq_meta(group) -> dict:
+    start = group["startmetadata"]
+    return {
+        "beamline_energy": _position(start, "beamline_energy"),
+        "arm_energy": _position(start, "veritasarm_energy"),
+        "start_time": _time(group, "start_time"),
+        "end_time": _time(group, "end_time"),
+    }
+
+
+def load_acq(day, acq: int, beamtime: str = "n26") -> Spectrum:
+    """The DAQ's dark-corrected spectrum of one acquisition, on detector channels."""
+    path = rixs_file(day, beamtime)
+    with open_h5(path) as f:
+        group = f[f"acq{acq}"]
+        channels = group["data/energy_scale"][()]
+        intensity = group["data/calib_x_spectrum"][()]
+        meta = {"beamtime": beamtime, "day": str(day), "acq": int(acq), "file": str(path),
+                **_acq_meta(group), "counts": float(intensity.sum())}
+    return Spectrum(channels, intensity, meta)
+
+
+def _scanned_motor(title: str, measurement) -> str:
+    words = title.split()
+    if len(words) > 1 and words[0].endswith("scan") and words[1] in measurement:
+        return words[1]
+    return "mono_energy_calib"
+
+
+def load_scan(day, entry: int, channel: str = "aemslit_ch1", x: str | None = None,
+              beamtime: str = "n26") -> Spectrum:
+    """One channel of a Scan-file entry against the scanned motor (or `x`)."""
+    path = scan_file(day, beamtime)
+    with open_h5(path) as f:
+        group = f[f"entry{entry}"]
+        title = group["title"][()].decode()
+        measurement = group["measurement"]
+        x = x or _scanned_motor(title, measurement)
+        meta = {"beamtime": beamtime, "day": str(day), "entry": int(entry), "file": str(path),
+                "title": title, "x": x, "channel": channel}
+        return Spectrum(measurement[x][()], measurement[channel][()], meta)
+
+
+@cache
+def _read_run_log(path: Path, mtime: float) -> pd.DataFrame:
+    return pd.read_csv(path, dtype={"acq": "Int64", "entry": "Int64", "day": "string"})
+
+
+def run_log(beamtime: str = "n26") -> pd.DataFrame:
+    """The run log written by tools/fetch_runlog.py, re-read whenever the CSV changes."""
+    path = runlog_csv(beamtime)
+    return _read_run_log(path, path.stat().st_mtime).copy()
+
+
+_LOG_COLUMNS = ["sample", "comments"]
+
+
+def _log_for(day: str, beamtime: str) -> pd.DataFrame:
+    try:
+        log = run_log(beamtime)
+    except (KeyError, FileNotFoundError) as e:
+        warnings.warn(f"no run log for {beamtime} ({e}); sample and comments left empty", stacklevel=3)
+        return pd.DataFrame(columns=["acq", *_LOG_COLUMNS]).astype({"acq": "Int64"})
+    log = log[(log["day"] == day) & log["acq"].notna()]
+    return log.drop_duplicates("acq")[["acq", *_LOG_COLUMNS]]
+
+
+def list_acqs(day, beamtime: str = "n26") -> pd.DataFrame:
+    """One row per acquisition in a RIXS file, with sample and comments from the run log."""
+    day = str(day)
+    rows = []
+    with open_h5(rixs_file(day, beamtime)) as f:
+        for name in f:
+            if not name.startswith("acq"):
+                continue
+            group = f[name]
+            rows.append({"day": day, "acq": int(name[3:]), **_acq_meta(group),
+                         "n_points": group["Instrument/DLD8080/data/points"].shape[0]})
+    acqs = pd.DataFrame(rows).sort_values("acq", ignore_index=True).astype({"acq": "Int64"})
+    return acqs.merge(_log_for(day, beamtime), on="acq", how="left")
