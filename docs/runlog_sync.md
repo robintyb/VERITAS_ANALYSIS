@@ -25,7 +25,8 @@ python tools/fetch_runlog.py n26
 ```
 
 It prints `wrote <path> (N rows)` or `unchanged <path> (N rows)`. Code finds
-the output through `veritas_paths.runlog_csv('n26')`. A notebook can refresh
+the output through `veritas_paths.runlog_csv('n26')`; `daq.run_log('n26')`
+loads it and `daq.list_acqs(day)` joins it to the acquisitions in a raw file. A notebook can refresh
 before loading with `!python ../../tools/fetch_runlog.py n26`.
 
 To keep the CSV current without thinking about it, run a loop in a terminal
