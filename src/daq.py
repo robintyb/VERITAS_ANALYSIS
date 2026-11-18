@@ -66,13 +66,21 @@ def _time(group, name):
 
 
 def acq_meta(group) -> dict:
-    start = group["startmetadata"]
+    """Start/end metadata. The start values are saved before the acquisition and can
+    be stale (n26 acq35: the arm reached 528 eV just before counting, start says 523),
+    so arm_energy_end is kept too; it is nan while an acquisition is running."""
+    start, end = group["startmetadata"], group.get("endmetadata", {})
     return {
         "beamline_energy": _position(start, "beamline_energy"),
         "arm_energy": _position(start, "veritasarm_energy"),
+        "arm_energy_end": _position(end, "veritasarm_energy"),
         "start_time": _time(group, "start_time"),
         "end_time": _time(group, "end_time"),
     }
+
+
+def arm_moved(meta: dict) -> bool:
+    return abs(meta["arm_energy_end"] - meta["arm_energy"]) > 0.01
 
 
 def _calibration(group) -> DLDCalibration:
@@ -139,6 +147,9 @@ def load_acq(day, acq: int, beamtime: str = "n26", calibrated: bool = False) -> 
         else:
             intensity = group["data/calib_x_spectrum"][()]
     meta["counts"] = float(intensity.sum())
+    if arm_moved(meta):
+        warnings.warn(f"acq{acq}: arm energy {meta['arm_energy']} eV at start, {meta['arm_energy_end']} eV at end",
+                      stacklevel=2)
     if calibrated:
         from calibration import energy_scale_for  # calibration imports daq
         try:

@@ -71,10 +71,21 @@ arm_energy = 525.0
 offset_eV  = 0.0
 reference  = "elastic sweep acq43 (capillary), 519-529 eV, quadratic; 6-polynomial curvature correction. From acq44 the DAQ writes this calibration itself"
 
+# acq35 is left out: its start metadata says arm 523 eV, but the arm reached
+# 528 eV before the first event, and there is no arm-528 sweep.
 [[n26]]
 file       = "escale_n26_3.npy"
 day        = "20261117"
 first_acq  = 7
+last_acq   = 34
+arm_energy = 523.0
+offset_eV  = 0.0
+reference  = "elastic sweep acq36 (jet), 519-527 eV, quadratic; 2-polynomial curvature correction. Fitted over channels 2450-6200; outside that range the scale is extrapolated"
+
+[[n26]]
+file       = "escale_n26_3.npy"
+day        = "20261117"
+first_acq  = 36
 last_acq   = 36
 arm_energy = 523.0
 offset_eV  = 0.0
