@@ -124,10 +124,14 @@ def energy_scale_for(beamtime: str, day, acq: int) -> tuple[np.ndarray, dict]:
     if not matches:
         raise LookupError(f"no energy scale in energy_scales/index.toml covers {beamtime} day {day} acq{acq}")
     entry = matches[-1]
-    arm = daq.acq_info(day, acq, beamtime)["arm_energy"]
-    if not abs(arm - entry["arm_energy"]) <= ARM_ENERGY_TOLERANCE_EV:
-        warnings.warn(f"acq{acq} was measured at arm energy {arm} eV, but {entry['file']} was calibrated "
-                      f"at {entry['arm_energy']} eV", stacklevel=2)
+    info = daq.acq_info(day, acq, beamtime)
+    arms = {"start": info["arm_energy"]}
+    if np.isfinite(info["arm_energy_end"]):  # nan while the acquisition runs
+        arms["end"] = info["arm_energy_end"]
+    for when, arm in arms.items():
+        if not abs(arm - entry["arm_energy"]) <= ARM_ENERGY_TOLERANCE_EV:
+            warnings.warn(f"acq{acq} was measured at arm energy {arm} eV ({when}), but {entry['file']} "
+                          f"was calibrated at {entry['arm_energy']} eV", stacklevel=2)
     return np.load(ENERGY_SCALES / entry["file"]) + entry.get("offset_eV", 0.0), entry
 
 
