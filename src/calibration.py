@@ -21,7 +21,6 @@ When several entries cover an acquisition, the one listed last wins.
 """
 from __future__ import annotations
 
-import copy
 import json
 import re
 import warnings
@@ -62,24 +61,6 @@ def plateaus(time, energy, tol: float = 0.05, min_duration: float = 30.0) -> lis
     return found
 
 
-def _light_minus_dark(path, acq: int):
-    """A function points -> dark-corrected channel histogram, as the DAQ computes it."""
-    import rixsaqlib.dldfile
-
-    light = rixsaqlib.dldfile.DLDFile(str(path), f"acq{acq}").loadCalibration()
-    with daq.open_h5(path) as f:
-        dark_window = f[f"acq{acq}/Instrument/DLD8080/calibration/dark_time_window"][()]
-    dark = copy.deepcopy(light)
-    dark.set_time_windows(dark_window)
-    n = light.x_size
-
-    def histogram(points):
-        def counts(cal):
-            return np.bincount(cal.corrected_points(points)[:, 0].astype(int), minlength=n)[:n]
-        return (counts(light) - counts(dark)).astype(float)
-    return histogram
-
-
 def _fit_peak(channels, counts, window: int, profile: str):
     smoothed = np.convolve(counts, np.ones(25) / 25, mode="same")
     c0 = int(np.argmax(smoothed))
@@ -112,16 +93,17 @@ def calibrate_elastic_sweep(day, acq: int, beamtime: str = "n26", order: int = 1
         log = group["External/beamline_energy/position"][()]
         channels = group["data/energy_scale"][()]
         meta = daq.acq_meta(group)
-    histogram = _light_minus_dark(path, acq)
+        histogram = daq.dark_corrected_histogram(group)
 
     rows = []
     for p in plateaus(log[:, 0], log[:, 1], min_duration=min_plateau_s):
         in_plateau = points[(points[:, 3] >= p.start) & (points[:, 3] <= p.end)]
         rows.append({"nominal_eV": p.energy, "start": p.start, "end": p.end, "n_points": len(in_plateau),
                      **_fit_peak(channels, histogram(in_plateau), window, profile)})
+    if len(rows) <= order:
+        raise ValueError(f"acq{acq}: {len(rows)} beamline-energy plateaus of at least {min_plateau_s} s "
+                         f"found, need more than {order} for order {order}")
     report = pd.DataFrame(rows).sort_values("nominal_eV", ignore_index=True)
-    if len(report) <= order:
-        raise ValueError(f"acq{acq}: {len(report)} plateaus found, need more than {order} for order {order}")
 
     coefficients = np.polyfit(report["centre"], report["nominal_eV"], order)
     report["fit_eV"] = np.polyval(coefficients, report["centre"])
@@ -155,11 +137,14 @@ def save_energy_scale(scale, beamtime: str, day, first_acq: int, arm_energy: flo
     taken = [int(m.group(1)) for p in ENERGY_SCALES.glob(f"escale_{beamtime}_*.npy")
              if (m := re.fullmatch(rf"escale_{re.escape(beamtime)}_(\d+)\.npy", p.name))]
     path = ENERGY_SCALES / f"escale_{beamtime}_{max(taken, default=0) + 1}.npy"
+    if not (np.isfinite(arm_energy) and np.isfinite(offset_eV)):
+        raise ValueError(f"arm_energy ({arm_energy}) and offset_eV ({offset_eV}) must be finite")
+    entry = {"file": path.name, "day": str(day), "first_acq": int(first_acq),
+             "last_acq": None if last_acq is None else int(last_acq),
+             "arm_energy": round(float(arm_energy), 3), "offset_eV": float(offset_eV), "reference": str(reference)}
+    lines = [f"{k:<10} = {json.dumps(v)}" for k, v in entry.items() if v is not None]
     with open(path, "xb") as f:
         np.save(f, np.asarray(scale, dtype=float))
-    entry = {"file": path.name, "day": str(day), "first_acq": int(first_acq), "last_acq": last_acq,
-             "arm_energy": round(float(arm_energy), 3), "offset_eV": float(offset_eV), "reference": reference}
-    lines = [f"{k:<10} = {json.dumps(v)}" for k, v in entry.items() if v is not None]
     with open(ENERGY_SCALES / "index.toml", "a") as f:
         f.write(f"\n[[{beamtime}]]\n" + "\n".join(lines) + "\n")
     return path

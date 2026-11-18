@@ -57,9 +57,12 @@ def _read_table(path: Path, mtime: float) -> pd.DataFrame:
 
 
 def run_table(key: str) -> pd.DataFrame:
-    """The beamtime's run table, re-read whenever the file changes."""
+    """The beamtime's run table, re-read whenever the file changes.
+
+    Shared between callers until the file changes, as the old module globals were.
+    """
     path = RUNINFO / get(key).run_table
-    return _read_table(path, path.stat().st_mtime).copy()
+    return _read_table(path, path.stat().st_mtime)
 
 
 def dld_file(key: str, row: int) -> Path:

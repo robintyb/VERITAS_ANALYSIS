@@ -31,6 +31,7 @@ class Spectrum:
             raise ValueError(f"energy {energy.shape} and intensity {intensity.shape} must be equal 1-D shapes")
         object.__setattr__(self, "energy", energy)
         object.__setattr__(self, "intensity", intensity)
+        object.__setattr__(self, "meta", dict(self.meta))
 
     def __len__(self):
         return self.energy.size
@@ -40,9 +41,14 @@ class Spectrum:
                        intensity=self.intensity if intensity is None else intensity,
                        energy=self.energy if energy is None else energy)
 
+    def _convolved(self, kernel) -> Spectrum:
+        if kernel.size > self.intensity.size:
+            raise ValueError(f"smoothing kernel ({kernel.size} bins) is longer than the spectrum ({self.intensity.size})")
+        return self._with(np.convolve(self.intensity, kernel, mode="same"))
+
     def smooth(self, k: int) -> Spectrum:
         """Box average over k bins."""
-        return self._with(np.convolve(self.intensity, np.ones(k) / k, mode="same"))
+        return self._convolved(np.ones(k) / k)
 
     def smooth_gauss(self, fwhm: float) -> Spectrum:
         """Gaussian smoothing; fwhm is in the units of `energy` (channels or eV)."""
@@ -54,7 +60,7 @@ class Spectrum:
         half = int(np.ceil(4 * sigma))
         x = np.arange(-half, half + 1)
         kernel = np.exp(-0.5 * (x / sigma) ** 2)
-        return self._with(np.convolve(self.intensity, kernel / kernel.sum(), mode="same"))
+        return self._convolved(kernel / kernel.sum())
 
     def lowpass(self, frequency: float = 0.1) -> Spectrum:
         """Zero every Fourier component above `frequency` (cycles per bin)."""
@@ -104,7 +110,7 @@ def combine(spectra) -> Spectrum:
         if not np.array_equal(s.energy, first.energy):
             raise ValueError("combine needs identical energy axes; sum on channels, then calibrate")
     parts = [s.meta for s in spectra]
-    arms = {round(m["arm_energy"], 2) for m in parts if "arm_energy" in m}
+    arms = {round(m["arm_energy"], 2) for m in parts if np.isfinite(m.get("arm_energy", np.nan))}
     if len(arms) > 1:
         warnings.warn(f"combining spectra measured at different arm energies {sorted(arms)}: "
                       "the same channel is a different emission energy", stacklevel=2)

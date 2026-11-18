@@ -1,4 +1,8 @@
-from veritas_paths import ENERGY_SCALES  # before h5py, see veritas_paths
+from veritas_paths import (  # before h5py, see veritas_paths
+    ENERGY_SCALES,
+    RUNINFO,
+    raw_data_dir,
+)
 
 import h5py
 import matplotlib.pyplot as plt
@@ -69,6 +73,9 @@ _LEGACY = {
     **{f'runinfo_{k}': (lambda k=k: bts.run_table(k)) for k in bts.BEAMTIMES},
     '_RUNINFO': lambda: {k: bts.run_table(k) for k in bts.BEAMTIMES},
     '_DLD_FILES': lambda: {k: list(b.dld_files) for k, b in bts.BEAMTIMES.items()},
+    'RUNINFO': lambda: RUNINFO,
+    'raw_data_dir': lambda: raw_data_dir,
+    '_escale_d22_file': lambda: ENERGY_SCALES / bts.energy_scale_entry('d22', 0)['file'],
     'shift_m23': lambda: -1.14213434,
     'shift_f24': lambda: -1,
     'escale_m23_1': lambda: bts.energy_scale('m23', 113),
@@ -168,7 +175,10 @@ class RIXS_run:
     def as_spectrum(self):
         """The corrected spectrum on the current energy scale, as a Spectrum (loads it if needed)."""
         if not len(self.corrected_spectrum):
+            energy_scale = self.energy_scale
             self.loadspectrum()
+            if len(energy_scale):
+                self.energy_scale = energy_scale
         return Spectrum(self.energy_scale, self.corrected_spectrum,
                         {"beamtime": self.marker, "run": self.run_number, "row": self.index,
                          "file": self.filename, "beamline_energy": self.beamline_energy,

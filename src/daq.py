@@ -10,6 +10,7 @@ opened read-only without HDF5 file locking.
 """
 from __future__ import annotations
 
+import copy
 import warnings
 from datetime import datetime
 from functools import cache
@@ -20,6 +21,7 @@ from veritas_paths import raw_data_dir, runlog_csv  # before h5py, see veritas_p
 import h5py
 import numpy as np
 import pandas as pd
+from rixsaqlib.dldcalibration import DLDCalibration
 
 from spectrum import Spectrum
 
@@ -73,6 +75,36 @@ def acq_meta(group) -> dict:
     }
 
 
+def _calibration(group) -> DLDCalibration:
+    """The acquisition's detector calibration (as rixsaqlib's loadCalibration), read without locking."""
+    c = group["Instrument/DLD8080/calibration"]
+    cal = DLDCalibration(c["x_size"][()], c["y_size"][()], c["t_size"][()])
+    cal.energy_scale = c["energy_scale"][()]
+    cal.set_curvature_center(c["curvature_center"][()])
+    cal.set_curvatures_fromarray(c["curvatures"][()])
+    cal.set_energylist_fromarray(c["energy_scale_lines"][()])
+    cal.set_energy_scale_order(c["energy_scale_order"][()])
+    cal.set_time_windows(c["time_window"][()])
+    cal.masks = c["clipping_masks"][()]
+    cal.set_time_modulo(c["time_modulo"][()])
+    cal.set_time_modulo_offset(c["time_modulo_offset"][()])
+    return cal
+
+
+def dark_corrected_histogram(group):
+    """A function points -> light - dark channel histogram, computed as the DAQ computes calib_x_spectrum."""
+    light = _calibration(group)
+    dark = copy.deepcopy(light)
+    dark.set_time_windows(group["Instrument/DLD8080/calibration/dark_time_window"][()])
+    n = light.x_size
+
+    def histogram(points):
+        def counts(cal):
+            return np.bincount(cal.corrected_points(points)[:, 0].astype(int), minlength=n)[:n]
+        return (counts(light) - counts(dark)).astype(float)
+    return histogram
+
+
 def acq_info(day, acq: int, beamtime: str = "n26") -> dict:
     """Beamline and arm energy, start and end time of one acquisition."""
     with open_h5(rixs_file(day, beamtime)) as f:
@@ -83,15 +115,25 @@ def load_acq(day, acq: int, beamtime: str = "n26", calibrated: bool = False) -> 
     """The DAQ's dark-corrected spectrum of one acquisition.
 
     On detector channels by default; with calibrated=True, in eV using the scale
-    energy_scales/index.toml assigns to this acquisition.
+    energy_scales/index.toml assigns to this acquisition. The DAQ writes the
+    spectrum only when an acquisition ends, so for one still running it is
+    rebuilt from the points recorded so far (meta["running"] is True).
     """
     path = rixs_file(day, beamtime)
     with open_h5(path) as f:
         group = f[f"acq{acq}"]
         energy = group["data/energy_scale"][()]
-        intensity = group["data/calib_x_spectrum"][()]
         meta = {"beamtime": beamtime, "day": str(day), "acq": int(acq), "file": str(path),
-                **acq_meta(group), "counts": float(intensity.sum()), "energy_scale": None}
+                **acq_meta(group), "energy_scale": None}
+        meta["running"] = meta["end_time"] is None
+        if meta["running"]:
+            points = group["Instrument/DLD8080/data/points"][()]
+            intensity = dark_corrected_histogram(group)(points)
+            warnings.warn(f"acq{acq} is still running; spectrum rebuilt from the {len(points)} "
+                          "points recorded so far", stacklevel=2)
+        else:
+            intensity = group["data/calib_x_spectrum"][()]
+    meta["counts"] = float(intensity.sum())
     if calibrated:
         from calibration import energy_scale_for  # calibration imports daq
         energy, entry = energy_scale_for(beamtime, day, acq)
