@@ -5,6 +5,7 @@ the same result every time. The energy axis can be detector channels or eV.
 """
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field, replace
 
 import numpy as np
@@ -84,3 +85,38 @@ class Spectrum:
         ax = ax or plt.gca()
         ax.plot(self.energy, self.intensity, **kw)
         return ax
+
+
+def _acquisition_seconds(meta: dict):
+    start, end = meta.get("start_time"), meta.get("end_time")
+    return (end - start).total_seconds() if start and end else None
+
+
+def combine(spectra) -> Spectrum:
+    """Sum the raw counts of spectra on one energy axis.
+
+    Use this to merge acquisitions: a 2 h run then weighs 1440 times a 5 s run.
+    Normalise afterwards if needed.
+    """
+    spectra = list(spectra)
+    first = spectra[0]
+    for s in spectra[1:]:
+        if not np.array_equal(s.energy, first.energy):
+            raise ValueError("combine needs identical energy axes; sum on channels, then calibrate")
+    parts = [s.meta for s in spectra]
+    arms = {round(m["arm_energy"], 2) for m in parts if "arm_energy" in m}
+    if len(arms) > 1:
+        warnings.warn(f"combining spectra measured at different arm energies {sorted(arms)}: "
+                      "the same channel is a different emission energy", stacklevel=2)
+    seconds = [_acquisition_seconds(m) for m in parts]
+    meta = {"parts": parts, "counts": float(sum(s.intensity.sum() for s in spectra)),
+            "acquisition_time": None if None in seconds else sum(seconds)}
+    return Spectrum(first.energy, np.sum([s.intensity for s in spectra], axis=0), meta)
+
+
+def average(spectra, grid=None) -> Spectrum:
+    """Unweighted mean of spectra (e.g. already normalised ones) on `grid`, default the first's axis."""
+    spectra = list(spectra)
+    grid = spectra[0].energy if grid is None else grid
+    stack = np.stack([s.on_grid(grid).intensity for s in spectra])
+    return Spectrum(grid, stack.mean(axis=0), {"parts": [s.meta for s in spectra]})

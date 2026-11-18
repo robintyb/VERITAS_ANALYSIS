@@ -1,6 +1,7 @@
 import bisect
 from veritas_paths import ENERGY_SCALES, RUNINFO, raw_data_dir  # before h5py, see veritas_paths
 import h5py
+from spectrum import Spectrum
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
@@ -233,6 +234,15 @@ class RIXS_run:
         self.corrected_spectrum=spec-spec_dark
         return spec, spec_dark
 
+    def as_spectrum(self):
+        """The corrected spectrum on the current energy scale, as a Spectrum (loads it if needed)."""
+        if not len(self.corrected_spectrum):
+            self.loadspectrum()
+        return Spectrum(self.energy_scale, self.corrected_spectrum,
+                        {"beamtime": self.marker, "run": self.run_number, "row": self.index,
+                         "file": self.filename, "beamline_energy": self.beamline_energy,
+                         "arm_energy": self.arm_energy})
+
     def set_energy_scale(self,energy_scale):
         self.energy_scale=np.array(energy_scale)
     
@@ -340,34 +350,3 @@ def load_from_index(index,**kwargs):
     filename = raw_data_dir(beamtime) / name
     return RIXS_run(str(filename), _RUNINFO[beamtime].loc[index]['Run name'],
                     index=index, runinfo=beamtime)
-
-#I think I can just write a function that averages RIXS_runs and returns a new one
-
-class average_RIXS(RIXS_run):
-    def __init__(self,filename,runinfo=None):
-        self.spectrum=np.array([])
-        self.energy_scales=np.array([])
-        self.dark=np.array([])
-        self.corrected_spectra=([])
-        self.binsize=1
-        self.runs=[]
-        self.run_numbers=[]
-        self.filename=filename
-        self.indices=[]
-        self.runinfo_name=runinfo
-
-    def load_indices(self,run_numbers):
-        self.run_numbers=np.array(run_numbers)
-    def load_runs(self):
-        self.runs=[RIXS_run(self.filename,number,self.indices[v],runinfo=self.runinfo_name) for v,number in enumerate(self.run_numbers)]
-    def average_runs(self):
-        pass
-
-    #def load_energy_scales(self):
-    #    filename=load_frim
-
-
-
-
-
-
