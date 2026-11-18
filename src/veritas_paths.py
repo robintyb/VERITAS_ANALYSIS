@@ -30,3 +30,24 @@ def raw_data_dir(beamtime):
             f"No raw-data path for '{beamtime}'. Copy config.example.toml to "
             f"{LOCAL_CONFIG.name} at the repo root and set [raw_data].{beamtime}."
         ) from None
+
+
+def _runlog(beamtime):
+    try:
+        return _load_config()["runlog"][beamtime]
+    except KeyError:
+        raise KeyError(
+            f"No run-log entry for '{beamtime}'. Copy the [runlog.{beamtime}] "
+            f"block from config.example.toml into {LOCAL_CONFIG.name}."
+        ) from None
+
+
+def runlog_sheet(beamtime):
+    """(sheet_id, gid) of the Google Sheet tab holding a beamtime's run log."""
+    entry = _runlog(beamtime)
+    return entry["sheet_id"], int(entry.get("gid", 0))
+
+
+def runlog_csv(beamtime):
+    """Clean run-log CSV written by tools/fetch_runlog.py. Relative paths are from the repo root."""
+    return REPO_ROOT / _runlog(beamtime)["csv"]
