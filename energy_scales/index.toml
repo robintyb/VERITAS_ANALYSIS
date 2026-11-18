@@ -90,3 +90,14 @@ last_acq   = 36
 arm_energy = 523.0
 offset_eV  = 0.0
 reference  = "elastic sweep acq36 (jet), 519-527 eV, quadratic; 2-polynomial curvature correction. Fitted over channels 2450-6200; outside that range the scale is extrapolated"
+
+# Stopgap until there is an elastic sweep at arm 528 eV: the arm-525 scale
+# shifted by the 3 eV arm change. acq46's own data/energy_scale is still the
+# DAQ's arm-525 calibration, so load it with calibrated=True.
+[[n26]]
+file       = "escale_n26_2.npy"
+day        = "20261117"
+first_acq  = 46
+arm_energy = 528.0
+offset_eV  = 3.0
+reference  = "escale_n26_2 (arm 525, acq43 sweep) + 3.0 eV for arm 528; not measured"
