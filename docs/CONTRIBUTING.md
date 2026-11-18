@@ -32,7 +32,8 @@ If something behaves oddly, restart the kernel.
 ## 3. Put your work into `main`
 
 1. Get the latest `main` (section 2) and check that
-   `python -c "import RIXS_functions, fitting_functions"` still works.
+   `python -c "import RIXS_functions, fitting_functions"` still works
+   and `uv run pytest` passes.
 2. `git push`, then open a pull request into `main` on GitHub.
 3. Merge it with **"Create a merge commit"** (not squash or rebase).
    Ask someone to look at it if anyone is awake.
@@ -46,12 +47,18 @@ If something behaves oddly, restart the kernel.
   Copy someone else's into your folder to build on it.
 - **`runinfo_files/`**: edit the `.csv`, not the `.xlsx`. If a merge
   conflicts because two people added rows, keep both.
-- **`energy_scales/`**: one energy scale is used for this whole beamtime.
-  Once it is set up, you don't need to touch this folder. The other files
-  are for older beamtimes and must stay unchanged so old results can be
-  reproduced. If the calibration really has to change, add a new file
-  (never overwrite one), add an entry for it in `energy_scales/index.toml`,
-  and tell everyone.
+- **`energy_scales/`**: an energy scale is valid only for the arm energy
+  it was measured at, so a new elastic sweep usually means a new scale.
+  Make it with `calibration.calibrate_elastic_sweep(day, acq)`, check the
+  fit report, and save it with `calibration.save_energy_scale(...)`, which
+  adds a new file and its `energy_scales/index.toml` entry. Never overwrite
+  an existing `.npy`: older ones must stay unchanged so old results can be
+  reproduced. Tell everyone when you add one.
+- **Where code goes in `src/`**: a new processing step is a `Spectrum`
+  method or a function that takes a `Spectrum`; a new line shape is a
+  `PROFILES` entry in `fitting_functions.py`; a new beamtime is data
+  (`config.local.toml`, `beamtimes.py`, `index.toml`), not new `if`
+  branches. Anything about one sample or edge belongs in your notebook.
 
 Changes to run tables and calibrations go through a pull request like
 code. Keep those small and merge them quickly, since others are waiting.

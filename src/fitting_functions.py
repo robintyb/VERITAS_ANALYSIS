@@ -1,6 +1,13 @@
-#Let's see if we can build something with lmfit
-import numpy as np
+"""Peak models for lmfit. Parameters are named position_i, amp_i, width_i, gamma_i.
+
+Fit with `lmfit.minimize(residual, params, args=(x, data, number, profile))`.
+"""
+import warnings
+
 import lmfit
+import numpy as np
+from scipy.special import voigt_profile
+
 
 def lorentz(x,x0,gamma): 
     one_o_pi=0.3183098861837907
@@ -9,56 +16,7 @@ def lorentz(x,x0,gamma):
 def gauss(x,position,amp,width):
     return amp*np.exp(-(x-position)**2/2/(width/2.355)**2)
 
-from scipy.special import voigt_profile
 voigt = lambda x,x0,amp,width,gamma:np.nan_to_num(amp*voigt_profile(x-x0,width/2.355,gamma))
-
-def pseudo_voigt(x,x0,amp,width,gamma):
-    fL=2*gamma
-    fg=width
-    #eta=1.36603(f_{L}/f)-0.47719(f_{L}/f)^{2}+0.11116(f_{L}/f)^{3},}
-
-def pseudo_voigt(x, center, amplitude, fwhm_g, gamma):
-    """
-    Compute the pseudo-Voigt profile (Thompson-Cox-Hastings approximation)
-    accurate to ~1% of the true Voigt.
-
-    Parameters
-    ----------
-    x : array_like
-        Energy (or other) axis values.
-    amplitude : float
-        Peak height (max intensity).
-    center : float
-        Peak center position.
-    fwhm_g : float
-        Gaussian FWHM (e.g. instrumental broadening).
-    fwhm_l : float
-        Lorentzian FWHM (e.g. lifetime broadening).
-
-    Returns
-    -------
-    y : ndarray
-        Pseudo-Voigt profile values.
-    """
-    fwhm_l=2*gamma
-    # Total FWHM
-    fwhm = (fwhm_g**5 + 2.69269*fwhm_g**4*fwhm_l + 2.42843*fwhm_g**3*fwhm_l**2 +
-            4.47163*fwhm_g**2*fwhm_l**3 + 0.07842*fwhm_g*fwhm_l**4 +
-            fwhm_l**5)**(1/5)
-
-    # Mixing parameter η (fraction Lorentzian)
-    eta = 1.36603*(fwhm_l/fwhm) - 0.47719*(fwhm_l/fwhm)**2 + 0.11116*(fwhm_l/fwhm)**3
-    eta = np.clip(eta, 0, 1)  # avoid numerical overshoot
-
-    # Gaussian and Lorentzian components (normalized)
-    sigma = fwhm_g / (2*np.sqrt(2*np.log(2)))
-    gaussian = np.exp(-((x - center)**2) / (2*sigma**2)) / (sigma*np.sqrt(2*np.pi))
-    lorentzian = (fwhm_l / 2) / ((x - center)**2 + (fwhm_l / 2)**2) / np.pi
-
-    # Weighted sum
-    return amplitude * (eta * lorentzian + (1 - eta) * gaussian)
-
-
 
 
 def pseudo_voigt(x, center, amplitude, fwhm_g, gamma): #heightnorm
@@ -87,6 +45,41 @@ def pseudo_voigt(x, center, amplitude, fwhm_g, gamma): #heightnorm
     return amplitude * (eta * lorentz + (1.0 - eta) * gauss)
 
 
+# name: (function, takes gamma). amp is the peak height for gauss and
+# pseudo_voigt, and the area for voigt. width is a Gaussian FWHM; gamma is
+# a Lorentzian HWHM. A new line shape is one new entry here.
+PROFILES = {
+    "gauss": (gauss, False),
+    "voigt": (voigt, True),
+    "pseudo_voigt": (pseudo_voigt, True),
+}
+
+
+def _peak(params, x, i, profile):
+    f, takes_gamma = PROFILES[profile]
+    args = [params[f'position_{i}'], params[f'amp_{i}'], params[f'width_{i}']]
+    if takes_gamma:
+        args.append(params[f'gamma_{i}'])
+    return f(x, *args)
+
+
+def peak_sum(params, x, number, profile="gauss"):
+    """The model: the sum of `number` peaks."""
+    total = np.zeros(len(x))
+    for i in range(number):
+        total += _peak(params, x, i, profile)
+    return total
+
+
+def components(params, x, number, profile="gauss"):
+    """Each peak on its own, for plotting the decomposition."""
+    return [_peak(params, x, i, profile) for i in range(number)]
+
+
+def residual(params, x, data, number, profile="gauss"):
+    """data - model, the residual lmfit.minimize expects."""
+    return data - peak_sum(params, x, number, profile)
+
 
 def create_parameters(number):
     fit_params=lmfit.Parameters()
@@ -110,52 +103,53 @@ def add_lorentz_gamma(fit_params,number,value=1,min=0.001,max=10):
     for thing in range(number):
         fit_params.add(f'gamma_{thing}',value=value,min=min,max=max)
     return fit_params
-        
-def sum_gauss(params,x,data,number):
-    
-    function=np.zeros(len(x))
-    for thing in range(number):
-        function+=gauss(x,params[f'position_{thing}'],params[f'amp_{thing}'],params[f'width_{thing}'])
-        res=(data-function)**2
 
-    return res
+
+def make_parameters(positions, amp=(2e-4, 1e-5, 5e-4), width=(0.2, 1e-3, 1.0),
+                    gamma=None, position_window=None):
+    """Parameters for len(positions) peaks; amp, width and gamma are (value, min, max)."""
+    p = lmfit.Parameters()
+    for i, x0 in enumerate(positions):
+        lo, hi = (x0 - position_window, x0 + position_window) if position_window else (-np.inf, np.inf)
+        p.add(f'position_{i}', value=x0, min=lo, max=hi)
+        p.add(f'amp_{i}', value=amp[0], min=amp[1], max=amp[2])
+        p.add(f'width_{i}', value=width[0], min=width[1], max=width[2])
+        if gamma:
+            p.add(f'gamma_{i}', value=gamma[0], min=gamma[1], max=gamma[2])
+    return p
+
+
+class SquaredResidualWarning(DeprecationWarning):
+    pass
+
+# Python hides DeprecationWarnings raised from library code, and lmfit is
+# what calls sum_*, so show this one explicitly.
+warnings.simplefilter("default", SquaredResidualWarning)
+
+
+def _deprecated_squared(name, profile, params, x, data, number):
+    warnings.warn(f"{name} returns the squared residual, so lmfit minimises the sum of r**4 and "
+                  f"its uncertainties are wrong. Use residual(params, x, data, number, '{profile}').",
+                  SquaredResidualWarning, stacklevel=3)
+    return residual(params, x, data, number, profile)**2
+
+def sum_gauss(params,x,data,number):
+    return _deprecated_squared('sum_gauss', 'gauss', params, x, data, number)
 
 def sum_voigt(params,x,data,number):
-    function=np.zeros(len(x))
-    for thing in range(number):
-        function+=voigt(x,params[f'position_{thing}'],params[f'amp_{thing}'],
-                       params[f'width_{thing}'],params[f'gamma_{thing}'])
-        res=np.array([(d-function[v])**2 for v,d in enumerate(data)])
-    return res
-
+    return np.asarray(_deprecated_squared('sum_voigt', 'voigt', params, x, data, number))
 
 def sum_pseudo_voigt(params,x,data,number):
-    function=np.zeros(len(x))
-    for thing in range(number):
-        function+=pseudo_voigt(x,params[f'position_{thing}'],params[f'amp_{thing}'],
-                       params[f'width_{thing}'],params[f'gamma_{thing}'])
-        res=np.array([(d-function[v])**2 for v,d in enumerate(data)])
-    return res
-    
+    return np.asarray(_deprecated_squared('sum_pseudo_voigt', 'pseudo_voigt', params, x, data, number))
+
 def plot_voigt(params,x,number):
-    function=np.zeros(len(x))
-    for thing in range(number):
-        function+=voigt(x,params[f'position_{thing}'],params[f'amp_{thing}'],
-                       params[f'width_{thing}'],params[f'gamma_{thing}'])
-    return x,function
+    return x, peak_sum(params, x, number, 'voigt')
 
 def plot_pseudo_voigt(params,x,number):
-    function=np.zeros(len(x))
-    for thing in range(number):
-        function+=pseudo_voigt(x,params[f'position_{thing}'],params[f'amp_{thing}'],
-                       params[f'width_{thing}'],params[f'gamma_{thing}'])
-    return x,function
-    
+    return x, peak_sum(params, x, number, 'pseudo_voigt')
+
 def plot_gauss(params,x,number):
-    function=np.zeros(len(x))
-    for thing in range(number):
-        function+=gauss(x,params[f'position_{thing}'],params[f'amp_{thing}'],params[f'width_{thing}'])
-    return x,function
+    return x, peak_sum(params, x, number, 'gauss')
 
 
 def set_initial_positions(fit_params,positions,limit=0.5):
