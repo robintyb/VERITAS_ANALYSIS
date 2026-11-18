@@ -11,10 +11,10 @@ from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 
+from veritas_paths import ENERGY_SCALES, RUNINFO, raw_data_dir
+
 import numpy as np
 import pandas as pd
-
-from veritas_paths import ENERGY_SCALES, RUNINFO, raw_data_dir
 
 
 @dataclass(frozen=True)

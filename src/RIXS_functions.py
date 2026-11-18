@@ -1,14 +1,13 @@
 from veritas_paths import ENERGY_SCALES  # before h5py, see veritas_paths
+
 import h5py
-import beamtimes as bts
-from spectrum import Spectrum
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.optimize import curve_fit
-import pandas as pd
-import rixsaqlib.dldfile
 import rixsaqlib.dlddata
-import lmfit
+import rixsaqlib.dldfile
+
+import beamtimes as bts
+from spectrum import Spectrum
 
 BEAMTIMES=tuple(bts.BEAMTIMES)
 

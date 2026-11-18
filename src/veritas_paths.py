@@ -6,8 +6,8 @@ Raw data locations differ per user and are read from `config.local.toml`
 at the repository root (see `config.example.toml`).
 """
 import os
-from pathlib import Path
 import tomllib
+from pathlib import Path
 
 # The DAQ appends to the current RIXS file while people analyse it, and
 # rixsaqlib opens files itself. HDF5 reads this only when h5py is first

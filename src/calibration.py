@@ -27,14 +27,15 @@ import re
 import warnings
 from dataclasses import dataclass
 
+from veritas_paths import ENERGY_SCALES
+
 import lmfit
 import numpy as np
 import pandas as pd
 
 import daq
-from beamtimes import read_index
 import fitting_functions as ff
-from veritas_paths import ENERGY_SCALES
+from beamtimes import read_index
 
 ARM_ENERGY_TOLERANCE_EV = 0.01
 
@@ -131,8 +132,7 @@ def calibrate_elastic_sweep(day, acq: int, beamtime: str = "n26", order: int = 1
 
 
 def _covers(entry: dict, day: str, acq: int) -> bool:
-    return (entry.get("day") == day and entry["first_acq"] <= acq
-            and acq <= entry.get("last_acq", acq))
+    return (entry.get("day") == day and entry["first_acq"] <= acq <= entry.get("last_acq", acq))
 
 
 def energy_scale_for(beamtime: str, day, acq: int) -> tuple[np.ndarray, dict]:

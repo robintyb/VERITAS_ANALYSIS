@@ -16,7 +16,7 @@ def lorentz(x,x0,gamma):
 def gauss(x,position,amp,width):
     return amp*np.exp(-(x-position)**2/2/(width/2.355)**2)
 
-voigt = lambda x,x0,amp,width,gamma:np.nan_to_num(amp*voigt_profile(x-x0,width/2.355,gamma))  # noqa: E731
+voigt = lambda x,x0,amp,width,gamma:np.nan_to_num(amp*voigt_profile(x-x0,width/2.355,gamma))
 
 
 def pseudo_voigt(x, center, amplitude, fwhm_g, gamma): #heightnorm
