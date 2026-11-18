@@ -24,7 +24,7 @@ dev = ["jupyterlab", "ipykernel", "nbstripout", "pre-commit"]
 
 [tool.setuptools]
 package-dir = { "" = "src", "rixsaqlib" = "extern/rixsaqlib" }
-py-modules = ["RIXS_functions", "daq", "fitting_functions", "spectrum", "veritas_paths"]
+py-modules = ["RIXS_functions", "calibration", "daq", "fitting_functions", "spectrum", "veritas_paths"]
 packages = ["rixsaqlib"]
 
 # Pylance/Pyright can't follow setuptools' editable-install import hook, so

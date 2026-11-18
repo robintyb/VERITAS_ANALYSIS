@@ -63,7 +63,7 @@ def _time(group, name):
     return datetime.fromisoformat(group[name][()].decode())
 
 
-def _acq_meta(group) -> dict:
+def acq_meta(group) -> dict:
     start = group["startmetadata"]
     return {
         "beamline_energy": _position(start, "beamline_energy"),
@@ -73,16 +73,30 @@ def _acq_meta(group) -> dict:
     }
 
 
-def load_acq(day, acq: int, beamtime: str = "n26") -> Spectrum:
-    """The DAQ's dark-corrected spectrum of one acquisition, on detector channels."""
+def acq_info(day, acq: int, beamtime: str = "n26") -> dict:
+    """Beamline and arm energy, start and end time of one acquisition."""
+    with open_h5(rixs_file(day, beamtime)) as f:
+        return acq_meta(f[f"acq{acq}"])
+
+
+def load_acq(day, acq: int, beamtime: str = "n26", calibrated: bool = False) -> Spectrum:
+    """The DAQ's dark-corrected spectrum of one acquisition.
+
+    On detector channels by default; with calibrated=True, in eV using the scale
+    energy_scales/index.toml assigns to this acquisition.
+    """
     path = rixs_file(day, beamtime)
     with open_h5(path) as f:
         group = f[f"acq{acq}"]
-        channels = group["data/energy_scale"][()]
+        energy = group["data/energy_scale"][()]
         intensity = group["data/calib_x_spectrum"][()]
         meta = {"beamtime": beamtime, "day": str(day), "acq": int(acq), "file": str(path),
-                **_acq_meta(group), "counts": float(intensity.sum())}
-    return Spectrum(channels, intensity, meta)
+                **acq_meta(group), "counts": float(intensity.sum()), "energy_scale": None}
+    if calibrated:
+        from calibration import energy_scale_for  # calibration imports daq
+        energy, entry = energy_scale_for(beamtime, day, acq)
+        meta["energy_scale"] = entry["file"]
+    return Spectrum(energy, intensity, meta)
 
 
 def _scanned_motor(title: str, measurement) -> str:
@@ -139,7 +153,7 @@ def list_acqs(day, beamtime: str = "n26") -> pd.DataFrame:
             if not name.startswith("acq"):
                 continue
             group = f[name]
-            rows.append({"day": day, "acq": int(name[3:]), **_acq_meta(group),
+            rows.append({"day": day, "acq": int(name[3:]), **acq_meta(group),
                          "n_points": group["Instrument/DLD8080/data/points"].shape[0]})
     acqs = pd.DataFrame(rows).sort_values("acq", ignore_index=True).astype({"acq": "Int64"})
     return acqs.merge(_log_for(day, beamtime), on="acq", how="left")
