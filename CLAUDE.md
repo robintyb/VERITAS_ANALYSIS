@@ -26,7 +26,7 @@ uv run python -c "import RIXS_functions, fitting_functions"
 - Beamtimes are keyed by short codes: `d22`, `m23`, `f24`, `m24`, `n26`. `RIXS_functions` loads every run table and energy scale at import time (module-level globals), then:
   - `filter_samples(energy, runinfo=..., ...)` returns row indices from a beamtime's run table.
   - `load_from_index(index, runinfo=...)` maps a row index to the right `.h5` file (hardcoded file list and index cutoffs per beamtime) and returns a `RIXS_run`.
-  - `RIXS_run` picks its energy scale by beamtime and row index in code. `energy_scales/index.toml` documents that mapping but is not read by the code, so keep the two in sync by hand.
+  - `RIXS_run.load_energy_scale` looks the scale up in `energy_scales/index.toml` through `beamtimes.py`; the index is the only place that maps rows to scales.
 - `fitting_functions.py` holds lmfit peak models (Gauss, Voigt, pseudo-Voigt sums). `pseudo_voigt` is defined three times; the last definition wins.
 
 ## Rules (from docs/CONTRIBUTING.md)

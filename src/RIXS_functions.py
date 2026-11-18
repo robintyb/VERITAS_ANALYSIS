@@ -1,6 +1,6 @@
-import bisect
-from veritas_paths import ENERGY_SCALES, RUNINFO, raw_data_dir  # before h5py, see veritas_paths
+from veritas_paths import ENERGY_SCALES  # before h5py, see veritas_paths
 import h5py
+import beamtimes as bts
 from spectrum import Spectrum
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,10 +9,8 @@ import pandas as pd
 import rixsaqlib.dldfile
 import rixsaqlib.dlddata
 import lmfit
-from copy import deepcopy
-import warnings
 
-BEAMTIMES=('d22','m23','f24','m24')
+BEAMTIMES=tuple(bts.BEAMTIMES)
 
 def rolling_avg(data,kernel_size):
     kernel = np.ones(kernel_size) / kernel_size
@@ -66,46 +64,25 @@ def split_spectrum(filep,acnr,provide_cutoff=False,**kwargs):
     
     return spec_low,spec_high,beamline_energy
 
-runinfo_m23=pd.read_excel(RUNINFO/'Veritas jet march 2023 - runinfo-2.xlsx')
-runinfo_d22=pd.read_csv(RUNINFO/'runinfo-Table 1.csv')
-runinfo_f24=pd.read_excel(RUNINFO/'VERITAS FEB 2024 - runinfo.xlsx')
-runinfo_m24=pd.read_excel(RUNINFO/'Veritas water jet vol 2 03-2024 .xlsx')
-
-_RUNINFO = {'d22': runinfo_d22, 'm23': runinfo_m23, 'f24': runinfo_f24, 'm24': runinfo_m24}
-
-# First run-table row of each DLD file. A file covers rows up to the next entry's row.
-_DLD_FILES = {
-    'd22': [(0, '20221207_DLD_1.h5'), (68, '20221209_DLD_1.h5'),
-            (94, '20221210_DLD_1.h5'), (120, '20221211_DLD_1.h5')],
-    'm23': [(0, '20230329_DLD_1.h5'), (27, '20230330_DLD_1.h5'),
-            (37, '20230401_DLD_1.h5'), (55, '20230401_DLD_2.h5'),
-            (95, '20230404_DLD_1.h5'), (105, '20230405_DLD_1.h5'),
-            (114, '20230405_DLD_2.h5'), (134, '20230407_DLD_1.h5')],
-    'f24': [(0, '20240220_DLD1.h5'), (56, 'testdld.h5')],
-    # row 26 is the "filepath changed to 20240309_dld1.h5" note, so acq120 (row 25) is in the first file
-    'm24': [(0, '20240307_DLD1.h5'), (26, '20240309_DLD1.h5')],
+# Old module-level names, now computed on first access (PEP 562).
+_LEGACY = {
+    **{f'runinfo_{k}': (lambda k=k: bts.run_table(k)) for k in bts.BEAMTIMES},
+    '_RUNINFO': lambda: {k: bts.run_table(k) for k in bts.BEAMTIMES},
+    '_DLD_FILES': lambda: {k: list(b.dld_files) for k, b in bts.BEAMTIMES.items()},
+    'shift_m23': lambda: -1.14213434,
+    'shift_f24': lambda: -1,
+    'escale_m23_1': lambda: bts.energy_scale('m23', 113),
+    'escale_f24_1': lambda: bts.energy_scale('f24', 0),
+    'escale_f24_2': lambda: bts.energy_scale('f24', 56),
+    'escale_m24_1': lambda: bts.energy_scale('m24', 0),
+    'escale_d22': lambda: bts.energy_scale('d22', 0) if (ENERGY_SCALES / bts.energy_scale_entry('d22', 0)['file']).exists() else None,
 }
 
-assert set(BEAMTIMES) == set(_RUNINFO) == set(_DLD_FILES), 'every beamtime needs a run table and a DLD file table'
 
-#I will calibrate these all in a way so that the O2 absorption is 531.2 eV
-# (the shifts below are applied on load; see energy_scales/index.toml)
-
-shift_m23=-1.14213434
-shift_f24=-1
-
-escale_m23_1=np.load(ENERGY_SCALES/'escale_m23_1.npy')-shift_m23
-escale_f24_1=np.load(ENERGY_SCALES/'escale_f24_1.npy')-shift_f24
-escale_f24_2=np.load(ENERGY_SCALES/'escale_f24_2.npy')-shift_f24
-escale_m24_1=np.load(ENERGY_SCALES/'escale_m24_1.npy')-shift_f24+0.4
-
-# Not yet committed to the repo - load it if someone adds it to energy_scales/
-_escale_d22_file=ENERGY_SCALES/'escale_ice_whole_detector.npy'
-if _escale_d22_file.exists():
-    escale_d22=np.load(_escale_d22_file)-2.4+1.62
-else:
-    escale_d22=None
-    warnings.warn(f'{_escale_d22_file.name} not found in energy_scales/; d22 energy scale unavailable.')
+def __getattr__(name):
+    if name in _LEGACY:
+        return _LEGACY[name]()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 
@@ -146,6 +123,19 @@ def _position(metadata, name):
         return np.nan
 
 
+LEGACY_DARK_START = 500  # used for files without calibration/dark_time_window
+
+
+def _dark_time_window(filename, run_number, calibration):
+    """The dark window the DAQ recorded, or the legacy one of the light window's width."""
+    with h5py.File(filename, 'r', locking=False) as f:
+        recorded = f[run_number].get('Instrument/DLD8080/calibration/dark_time_window')
+        if recorded is not None:
+            return recorded[()]
+    width = np.abs(calibration.time_window[1]-calibration.time_window[0])
+    return [LEGACY_DARK_START, LEGACY_DARK_START+width]
+
+
 class RIXS_run:
     def __init__(self,filename, run_number,index=np.nan, **kwargs):
 
@@ -153,12 +143,8 @@ class RIXS_run:
         #this bit is so that you can determine what runinfo file to use with kwargs
         if 'runinfo' not in kwargs:
             raise ValueError(f'specify runinfo as one of {BEAMTIMES}')
-        runinfo_name=str(kwargs['runinfo']).lower()
-        if runinfo_name not in _RUNINFO:
-            raise ValueError(f"unknown runinfo {kwargs['runinfo']!r}; known: {BEAMTIMES}. "
-                             "For n26 and later use daq.load_acq(day, acq).")
-        self.marker=runinfo_name
-        self.runinfo=_RUNINFO[runinfo_name]
+        self.marker=bts.get(str(kwargs['runinfo']).lower()).key
+        self.runinfo=bts.run_table(self.marker)
 
         #now come the calibration files. let's start with f24 because that is most solid. Then we define all other scales with the help of that 
         #one.
@@ -202,9 +188,7 @@ class RIXS_run:
         calibration = file1.loadCalibration()
         # Open the same calibration again, but this time we will change it a bit
         calibration2 = file1.loadCalibration()
-        timewindowsize = np.abs(calibration.time_window[1]-calibration.time_window[0])
-        # Place the marker for dark
-        darktimes = [500,500+timewindowsize]#[800,800+timewindowsize]
+        darktimes = _dark_time_window(self.filename, self.run_number, calibration)
         #print("Light timewindow:", calibration.time_window)
         ## Change it in the second calibration
         calibration2.set_time_windows(darktimes)
@@ -259,24 +243,7 @@ class RIXS_run:
         #Set calibration indices based on file
         assert not np.isnan(self.index), 'specify index first'
 
-        if self.marker=='m23':
-            self.energy_scale=escale_m23_1
-            if self.index<113:
-                self.energy_scale=escale_m23_1+1
-            
-        if self.marker=='f24':
-            if self.index<56:
-                self.energy_scale=escale_f24_1
-            elif self.index>56:
-                self.energy_scale=escale_f24_2
-
-        if self.marker=='m24':
-            self.energy_scale=escale_m24_1
-        if self.marker=='d22':
-            if escale_d22 is None:
-                raise FileNotFoundError(f'{_escale_d22_file.name} not found in energy_scales/')
-            self.energy_scale=escale_d22
-
+        self.energy_scale=bts.energy_scale(self.marker,int(self.index))
         self.energy_scale=self.energy_scale+offset
 
         """
@@ -307,28 +274,16 @@ def filter_samples(excitation_energy,**kwargs):
     index_start and index_end can be entered
     """
 
-    index=np.nan
     if kwargs.get('runinfo') not in BEAMTIMES:
         raise ValueError(f'specify runinfo as one of {BEAMTIMES}')
-    if 'runinfo' in kwargs:
-        if kwargs['runinfo']=='m23':
-            sample_valence=deepcopy(runinfo_m23)
-        if kwargs['runinfo']=='f24':
-            sample_valence=deepcopy(runinfo_f24)
-        if kwargs['runinfo']=='m24':
-            sample_valence=deepcopy(runinfo_m24)
-        if kwargs['runinfo']=='d22':
-            sample_valence=deepcopy(runinfo_d22)
-        
-    if 'sample_name' in kwargs:
-        sample_valence=sample_valence[sample_valence['Sample name']==kwargs['sample_name']]
-    if 'type_of_ice' in kwargs:
-        sample_valence=sample_valence[sample_valence['Type of ice']==kwargs['type_of_ice']]
-    if 'temperature' in kwargs:
-        if not kwargs['runinfo']=='m24':
-            sample_valence=sample_valence[sample_valence['Temperature (K)']==kwargs['temperature']]
-        else: sample_valence=sample_valence[sample_valence['Temperature (C, Thermo Connection)']==kwargs['temperature']]
-    index=sample_valence[sample_valence['Veritas beamline energy (eV)']==excitation_energy].index.tolist()#[2:]
+    bt=bts.get(kwargs['runinfo'])
+    table=bts.run_table(bt.key)
+    mask=table['Veritas beamline energy (eV)']==excitation_energy
+    for arg,column in {'sample_name':'Sample name','type_of_ice':'Type of ice',
+                       'temperature':bt.temperature_column}.items():
+        if arg in kwargs:
+            mask&=table[column]==kwargs[arg]
+    index=table.index[mask].tolist()
     index=np.array(index)
     if 'index_start' in kwargs:
         index=index[np.where(index>kwargs['index_start'])]
@@ -342,11 +297,5 @@ def load_from_index(index,**kwargs):
     beamtime = kwargs.get('runinfo')
     if beamtime not in BEAMTIMES:
         raise ValueError(f'specify runinfo as one of {BEAMTIMES}')
-    segments = _DLD_FILES[beamtime]
-    first_rows = [first for first, _ in segments]
-    if index < first_rows[0]:
-        raise IndexError(f'row {index} is before the first {beamtime} file')
-    name = segments[bisect.bisect_right(first_rows, index) - 1][1]
-    filename = raw_data_dir(beamtime) / name
-    return RIXS_run(str(filename), _RUNINFO[beamtime].loc[index]['Run name'],
+    return RIXS_run(str(bts.dld_file(beamtime, index)), bts.run_table(beamtime).loc[index]['Run name'],
                     index=index, runinfo=beamtime)

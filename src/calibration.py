@@ -24,7 +24,6 @@ from __future__ import annotations
 import copy
 import json
 import re
-import tomllib
 import warnings
 from dataclasses import dataclass
 
@@ -33,6 +32,7 @@ import numpy as np
 import pandas as pd
 
 import daq
+from beamtimes import read_index
 import fitting_functions as ff
 from veritas_paths import ENERGY_SCALES
 
@@ -128,12 +128,6 @@ def calibrate_elastic_sweep(day, acq: int, beamtime: str = "n26", order: int = 1
     report.attrs = {"beamtime": beamtime, "day": str(day), "acq": int(acq), "order": order,
                     "coefficients": coefficients, "arm_energy": meta["arm_energy"]}
     return np.polyval(coefficients, channels), report
-
-
-def read_index() -> dict[str, list[dict]]:
-    """energy_scales/index.toml: beamtime key -> list of entries, in file order."""
-    with open(ENERGY_SCALES / "index.toml", "rb") as f:
-        return tomllib.load(f)
 
 
 def _covers(entry: dict, day: str, acq: int) -> bool:
