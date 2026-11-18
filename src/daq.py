@@ -118,7 +118,8 @@ def load_acq(day, acq: int, beamtime: str = "n26", calibrated: bool = False) -> 
     the DAQ has been given a calibration (energy_scale_lines; n26 from acq44 on).
     meta["energy_scale"] says which ("channels" or "daq"). With calibrated=True the
     axis is replaced by the scale energy_scales/index.toml assigns to this
-    acquisition, and meta["energy_scale"] names that file. The DAQ writes the
+    acquisition (meta["energy_scale"] names that file); with no such entry, the
+    DAQ's eV axis is kept, and a channel axis raises LookupError. The DAQ writes the
     spectrum only when an acquisition ends, so for one still running it is
     rebuilt from the points recorded so far (meta["running"] is True).
     """
@@ -140,8 +141,12 @@ def load_acq(day, acq: int, beamtime: str = "n26", calibrated: bool = False) -> 
     meta["counts"] = float(intensity.sum())
     if calibrated:
         from calibration import energy_scale_for  # calibration imports daq
-        energy, entry = energy_scale_for(beamtime, day, acq)
-        meta["energy_scale"] = entry["file"]
+        try:
+            energy, entry = energy_scale_for(beamtime, day, acq)
+            meta["energy_scale"] = entry["file"]
+        except LookupError:
+            if meta["energy_scale"] != "daq":
+                raise
     return Spectrum(energy, intensity, meta)
 
 
