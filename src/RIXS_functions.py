@@ -15,53 +15,54 @@ def rolling_avg(data,kernel_size):
     kernel = np.ones(kernel_size) / kernel_size
     return np.convolve(data, kernel, mode='same')
 
-def split_spectrum(filep,acnr,provide_cutoff=False,**kwargs):
-    #The spectra are not background corrected yet. 
-    #That doesn't make that much of a difference but is something to fix later on.
-    
+def event_interval(points, window=512):
+    """Time between consecutive DLD events, box-averaged over `window` events (one shorter than points)."""
+    return rolling_avg(np.diff(points[:, 3]), window)
+
+
+def plot_count_rate_histogram(interval, label=None, bins=400, ax=None):
+    ax = ax or plt.gca()
+    counts, edges = np.histogram(1 / interval, bins=bins)
+    ax.plot(edges[:-1], np.log(counts), label=label)
+    ax.set_xlabel('countrate')
+    ax.set_title('histogram over countrate (high countrate peak is probably crystallised)')
+    ax.legend()
+    ax.grid()
+    return ax
+
+
+def split_points(points, interval, cutoff):
+    """(points below, points above) a count rate of `cutoff` events per second."""
+    limit = 1 / float(cutoff)
+    head = points[:-1]
+    return head[interval > limit], head[interval < limit]
+
+
+def _histogram(calibration, points, n=8192):
+    channels = calibration.corrected_points(points)[:, 0].astype(int)
+    return np.bincount(channels, minlength=n)[:n].astype(float)
+
+
+def split_spectrum(filep,acnr,provide_cutoff=False,cutoff=None,**kwargs):
+    """Spectra of the low- and high-count-rate parts of an acquisition, and its final beamline energy.
+
+    Pass `cutoff` (events per second) to skip the histogram and the prompt.
+    The spectra are not dark-corrected.
+    """
+    if provide_cutoff and cutoff is None:
+        raise ValueError('provide_cutoff=True needs cutoff=<events per second>')
     with h5py.File(filep, 'r', locking=False) as file:
         beamline_energy=file[f'{acnr}/endmetadata/beamline_energy/position'][()]
     file1 = rixsaqlib.dldfile.DLDFile(filep, acnr)
     points = file1.loadPoints()
-    countrate=points[:,3][1:]-points[:,3][:-1]
-    countrate=rolling_avg(countrate,512)
-
-    histogram=np.histogram(1/countrate,bins=400)
-
-    if not provide_cutoff:
-        plt.plot(histogram[1][:-1],np.log(histogram[0]),label=f'{int(beamline_energy)} eV')
-        plt.xlabel('countrate')
-        plt.title('histogram over countrate (high countrate peak is probably crystallised)')
-        plt.legend()
-        plt.grid()
+    interval = event_interval(points)
+    if cutoff is None:
+        plot_count_rate_histogram(interval, label=f'{int(beamline_energy)} eV')
         plt.show()
-        limit=float(input('set countrate cutoff'))
-        limit=1/limit
-    
-    else:
-        limit=kwargs['cutoff']
-        limit=1/float(limit)
-        
-    filtered_points=points[np.where(countrate>limit)]
-    filtered_points_high=points[np.where(countrate<limit)]
-    
+        cutoff = input('set countrate cutoff')
+    low, high = split_points(points, interval, cutoff)
     calibration = file1.loadCalibration()
-    corrected_points=calibration.corrected_points(filtered_points)
-    corrected_points_2=calibration.corrected_points(filtered_points_high)
-    
-    spec_low=np.zeros(8192)
-    spec_high=np.zeros(8192)
-    index=corrected_points[:,0].astype(int)
-    index2=corrected_points_2[:,0].astype(int)
-    
-    for indice in index:
-        spec_low[indice]+=1
-    
-    for indice in index2:
-        spec_high[indice]+=1
-
-    
-    return spec_low,spec_high,beamline_energy
+    return _histogram(calibration, low), _histogram(calibration, high), beamline_energy
 
 # Old module-level names, now computed on first access (PEP 562).
 _LEGACY = {
@@ -83,35 +84,6 @@ def __getattr__(name):
         return _LEGACY[name]()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
-
-
-#valence=runinfo[runinfo['RIXS or XAS']=='RIXS-valence']
-#water_valence=valence[valence['Sample name']=='Water']
-#escale_day_6=np.load('escale_day_6.npy')
-#escale_day_10=np.load('escale_day_10.npy')
-#escale_day_11=np.load('escale_day_11.npy')
-
-
-"""
-Alright, what are the runinfo files? There is one for:
-December 2022
-March 2023
-February 2024
-March 2024
-
-Let's just load them all here. Then for each, let's just manually make calibrated axes for every calibration instance. Then when averaging,
-let's just have it interpolate. This is not rocket sience. Not motivated to do it though...
-
-
-Step by step:
-1. load all the runinfo in this or a separate config file. I say just do it here.
-2. now do the energy scales. You have feb 24 and mar 24 now. what remains is:
-    dec 22 (probably single file, the one you have. Maybe make them match the really old data??)
-    mar 23 - day 10 is final escale water. shift that to match the others
-    day 11 - I don't know how to do that yet. make the  D2O match somehow
-
-
-"""
 
 
 def _position(metadata, name):
@@ -137,18 +109,10 @@ def _dark_time_window(filename, run_number, calibration):
 
 class RIXS_run:
     def __init__(self,filename, run_number,index=np.nan, **kwargs):
-
-
-        #this bit is so that you can determine what runinfo file to use with kwargs
         if 'runinfo' not in kwargs:
             raise ValueError(f'specify runinfo as one of {BEAMTIMES}')
         self.marker=bts.get(str(kwargs['runinfo']).lower()).key
         self.runinfo=bts.run_table(self.marker)
-
-        #now come the calibration files. let's start with f24 because that is most solid. Then we define all other scales with the help of that 
-        #one.
-        
-        
         self.run_number=run_number
         self.filename=filename
         self.spectrum=np.array([])
@@ -171,31 +135,15 @@ class RIXS_run:
                 self.run_number, _position(metadata, 'beamline_energy'),
                 _position(metadata, 'a_slit1_v'), _position(metadata, 'veritasarm_energy')))
         
-    def initialise_calib_indices(self,runinfo):
-        pass
-        
     def loadspectrum(self):
         file1 = rixsaqlib.dldfile.DLDFile(self.filename, self.run_number)
-        #with h5py.File(file1.hdf5filename, "r") as f:
-        #    arme = f[self.run_number]["startmetadata/veritasarm_energy/position"][()]
-        #    slit = f[self.run_number]["startmetadata/a_slit1_v/position"][()]
-        #    beamline = f[self.run_number]["startmetadata/beamline_energy/position"][()]
-        #    #print("{},  Beamline energy: {:.2f} eV, Slit: {:.2f}, Arm energy: {:.2f} eV".format(dataset,beamline,slit,arme))
-
         points = file1.loadPoints()
 
         calibration = file1.loadCalibration()
         # Open the same calibration again, but this time we will change it a bit
         calibration2 = file1.loadCalibration()
-        darktimes = _dark_time_window(self.filename, self.run_number, calibration)
-        #print("Light timewindow:", calibration.time_window)
-        ## Change it in the second calibration
-        calibration2.set_time_windows(darktimes)
-        #print("Dark timewindow:", calibration2.time_window)
+        calibration2.set_time_windows(_dark_time_window(self.filename, self.run_number, calibration))
 
-        # Go from rawpoints and get corrected points
-        # also get dark_points using the second calibration
-        #corrected_points = calibration.corrected_points(points)
         dark_points = calibration2.corrected_points(points)
         corrected_points = calibration.corrected_points(points)
 
@@ -239,21 +187,11 @@ class RIXS_run:
     def normalise(self):
         self.corrected_spectrum=self.corrected_spectrum/np.trapezoid(self.corrected_spectrum,x=self.energy_scale)
     def load_energy_scale(self,offset=0):
-        #Set calibration indices based on file
         assert not np.isnan(self.index), 'specify index first'
 
         self.energy_scale=bts.energy_scale(self.marker,int(self.index))
         self.energy_scale=self.energy_scale+offset
 
-        """
-        if self.index<100:
-            self.energy_scale=escale_day_6+offset
-        elif self.index<172:
-            self.energy_scale=escale_day_10+offset
-        else:
-            self.energy_scale=escale_day_11+offset
-        """
-        
     def get_excitation_energy(self):
         if not np.isnan(self.index):
             self.excitation_energy=self.runinfo.loc[int(self.index)]['Veritas beamline energy (eV)']
@@ -267,7 +205,7 @@ class RIXS_run:
 
 def filter_samples(excitation_energy,**kwargs):
     """
-    specify runinfo as m23, f24 or m24
+    specify runinfo as d22, m23, f24 or m24
     specify excitation_energy
     specify sample_name
     index_start and index_end can be entered
