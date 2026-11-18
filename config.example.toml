@@ -7,3 +7,11 @@
 [raw_data]
 #!TODO update path
 n26 = "/data/visitors/veritas/<proposal>/<visit>/raw"   # november 2026 beamtime
+
+# Google Sheet run logs, converted to CSV by tools/fetch_runlog.py.
+# sheet_id is the long id in the sheet's URL. Keep it here and out of git:
+# the repository is public, and anyone with the id can open the sheet.
+[runlog.n26]
+sheet_id = "<id from https://docs.google.com/spreadsheets/d/<id>/edit>"
+gid = 0                                  # the tab's gid= from its URL; 0 is "Run table"
+csv = "runinfo_files/n26_runlog.csv"     # relative to the repo root, or absolute
