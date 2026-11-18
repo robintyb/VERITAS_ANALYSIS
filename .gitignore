@@ -37,3 +37,7 @@ venv/
 #!TODO at the end of the n26 beamtime, fetch a final copy, remove this line,
 # and commit runinfo_files/n26_runlog.csv so the analysis stays reproducible.
 runinfo_files/n26_runlog.csv
+
+# --- Claude Code, per-user ---
+.claude/specs/
+.claude/settings.local.json
