@@ -4,10 +4,12 @@
 
 | Folder | Contents |
 |---|---|
-| `src/` | Shared analysis code (installed as a package, see below) |
+| `src/` | Shared analysis code, installed as top-level modules (see [Using the code](#using-the-code)) |
 | `analysis_notebooks/<your-name>/` | Your own notebooks. Don't edit someone else's notebook: copy it into your own folder. |
 | `energy_scales/` | Energy calibrations (`.npy`). **Never overwrite one.** `energy_scales/index.toml` says which runs use which file |
-| `runinfo_files/` | Run tables. The code reads the `.csv`; the `.xlsx` files are read-only |
+| `runinfo_files/` | Run tables of older beamtimes (read-only `.xlsx`/`.csv`) and the n26 run log CSV fetched from Google Sheets |
+| `tools/` | Scripts: `fetch_runlog.py` (n26 run log, see [docs/runlog_sync.md](docs/runlog_sync.md)), `check_run_mapping.py` |
+| `tests/` | Checks that need no raw data: `uv run pytest` |
 
 Raw data (`.h5`) is **not** stored in the repository.
 
@@ -36,7 +38,13 @@ cp config.example.toml config.local.toml
 ```
 
 `dev` is an extra, so pass `--extra dev`, not `--group dev`. A plain `uv sync`
-removes the dev tools. Run `uv sync --extra dev` again after pulling
+removes the dev tools.
+
+Run `uv sync` in a terminal on the machine where your Jupyter kernel runs
+(on JupyterHub: **File → New → Terminal**). The install records absolute
+paths, and on some nodes `/data/visitors` is a link to another path. A
+`.venv` synced on another node can then give
+`ModuleNotFoundError: No module named 'RIXS_functions'` in the notebook. Run `uv sync --extra dev` again after pulling
 dependency changes. Either `source .venv/bin/activate` or prefix commands
 with `uv run` (e.g. `uv run jupyter lab`).
 
@@ -82,6 +90,9 @@ import RIXS_functions as rf
 import fitting_functions as ff
 ```
 
+and add the modules you use from [Using the code](#using-the-code), e.g.
+`import daq` and `import spectrum as sp` for n26 data.
+
 ### Keeping the kernel in sync
 
 | You changed... | pip / venv | uv |
@@ -107,6 +118,99 @@ Notes:
 - A uv-made `.venv` has no `pip`, so `%pip install` in a notebook fails. Use
   `uv add` in a terminal instead.
 - If something still behaves oddly after a reload, restart the kernel.
+
+## Using the code
+
+Each file in `src/` is a module you import by name:
+
+| Module | What it is for |
+|---|---|
+| `daq` | n26 and later: load acquisitions by `(day, acq)`, scans, and the run log |
+| `spectrum` | `Spectrum`, an immutable (energy, intensity, meta) value, and `combine` / `average` |
+| `calibration` | Energy scales: fit an elastic sweep, save a scale, look one up |
+| `fitting_functions` (`ff`) | lmfit peak models and `residual` |
+| `RIXS_functions` (`rf`) | The older API for d22, m23, f24 and m24: `filter_samples`, `load_from_index`, `RIXS_run` |
+| `beamtimes` | The registry of those older beamtimes |
+| `veritas_paths` | Where files are: repo folders and the paths in `config.local.toml` |
+
+### n26 data
+
+Acquisitions are addressed by the `YYYYMMDD` in the raw file name (`day`)
+and the acquisition number. One file is one DAQ session, so a file can run
+past midnight.
+
+```python
+import daq
+import spectrum as sp
+
+daq.list_acqs("20261117")                      # one row per acq: energies, times, sample, comments
+s = daq.load_acq("20261117", 38, calibrated=True)   # DAQ's dark-corrected spectrum, in eV
+s = s.smooth_gauss(0.05).normalised()          # every operation returns a new Spectrum
+s.plot()
+
+runs = [daq.load_acq("20261117", a, calibrated=True) for a in (38, 40)]
+total = sp.combine(runs)                       # sums counts; normalise afterwards
+xas = daq.load_scan("20261117", 10519)         # aemslit_ch1 against the scanned motor
+```
+
+- `calibrated=True` uses the energy scale `energy_scales/index.toml` assigns
+  to that acquisition. Without it you get the DAQ's own axis, which is
+  channels before acq44 and the DAQ's arm-525 eV calibration from acq44 on.
+  `s.meta["energy_scale"]` says which one you have.
+- A scale is only valid for the arm energy it was measured at. Loading an
+  acquisition taken at another arm energy, or one where the arm moved during
+  the acquisition, gives a warning.
+- An acquisition that is still running is rebuilt from the events recorded
+  so far, with a warning.
+- To merge acquisitions use `sp.combine`, which sums counts, so a 2 h run
+  counts more than a 5 s one. `sp.average` is a plain mean.
+- `daq.list_acqs` reads the run log CSV; refresh it with
+  `python tools/fetch_runlog.py n26`.
+
+### Fitting
+
+```python
+import lmfit
+w = s.cropped(522, 527)                               # fit window, in eV
+params = ff.make_parameters([524.0, 525.5],           # initial positions
+                            amp=(0.1, 0, 10),         # (value, min, max), in units of the data
+                            width=(0.5, 0.01, 3),     # Gaussian FWHM, eV
+                            position_window=1.0)      # each position may move +-1 eV
+result = lmfit.minimize(ff.residual, params, args=(w.energy, w.intensity, 2, "gauss"))
+lmfit.report_fit(result)
+```
+
+`make_parameters`' default `amp` bounds suit one particular unnormalised
+spectrum, so set `amp` for your data.
+
+Line shapes are in `ff.PROFILES` (`gauss`, `voigt`, `pseudo_voigt`). The old
+`ff.sum_gauss` / `sum_voigt` / `sum_pseudo_voigt` square the residual, so
+lmfit minimised r⁴ and reported uncertainties that are far too large. They
+still work but warn. Use `ff.residual`.
+
+### New energy calibration
+
+After an elastic sweep (beamline energy stepped during one acquisition):
+
+```python
+import calibration
+scale, report = calibration.calibrate_elastic_sweep("20261117", 43, order=2)
+report            # one row per energy step: fitted channel, uncertainty, residual
+calibration.save_energy_scale(scale, "n26", "20261117", first_acq=43,
+                              arm_energy=report.attrs["arm_energy"],
+                              reference="elastic sweep acq43")
+```
+
+`save_energy_scale` writes a new `.npy` and adds its `index.toml` entry. It
+never overwrites one. Open a pull request with both files.
+
+### Before a pull request
+
+```bash
+uv run python -c "import RIXS_functions, fitting_functions"
+uv run pytest
+uv run ruff check src tests
+```
 
 ## Working together
 
