@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import fitting_functions as ff
-from spectrum import Spectrum, combine
+from spectrum import FWHM_TO_SIGMA, Spectrum, _gauss_uneven, combine
 
 
 def peak(n=400, centre=200.0, counts=1000.0, start=None, seconds=10, arm=525.0):
@@ -67,3 +67,13 @@ def test_legacy_wrappers_match_peak_sum(profile):
     with pytest.warns(DeprecationWarning):
         squared = getattr(ff, f"sum_{profile}")(params, x, x, 2)
     assert np.array_equal(squared, ff.residual(params, x, x, 2, profile) ** 2)
+
+
+def test_smooth_gauss_on_an_uneven_axis_keeps_counts_and_matches_even_case():
+    x = np.arange(400.0)
+    uneven = Spectrum(500 + 0.002 * x + 2e-6 * x**2, peak().intensity)
+    smoothed = uneven.smooth_gauss(0.05)
+    assert smoothed.intensity.sum() == pytest.approx(uneven.intensity.sum())
+    even = peak()
+    spread = _gauss_uneven(even.energy, even.intensity, 10 * FWHM_TO_SIGMA)
+    assert np.allclose(spread[50:350], even.smooth_gauss(10).intensity[50:350])

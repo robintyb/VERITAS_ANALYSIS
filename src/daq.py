@@ -114,8 +114,11 @@ def acq_info(day, acq: int, beamtime: str = "n26") -> dict:
 def load_acq(day, acq: int, beamtime: str = "n26", calibrated: bool = False) -> Spectrum:
     """The DAQ's dark-corrected spectrum of one acquisition.
 
-    On detector channels by default; with calibrated=True, in eV using the scale
-    energy_scales/index.toml assigns to this acquisition. The DAQ writes the
+    On the axis the DAQ stored in data/energy_scale: detector channels, or eV once
+    the DAQ has been given a calibration (energy_scale_lines; n26 from acq44 on).
+    meta["energy_scale"] says which ("channels" or "daq"). With calibrated=True the
+    axis is replaced by the scale energy_scales/index.toml assigns to this
+    acquisition, and meta["energy_scale"] names that file. The DAQ writes the
     spectrum only when an acquisition ends, so for one still running it is
     rebuilt from the points recorded so far (meta["running"] is True).
     """
@@ -124,7 +127,8 @@ def load_acq(day, acq: int, beamtime: str = "n26", calibrated: bool = False) -> 
         group = f[f"acq{acq}"]
         energy = group["data/energy_scale"][()]
         meta = {"beamtime": beamtime, "day": str(day), "acq": int(acq), "file": str(path),
-                **acq_meta(group), "energy_scale": None}
+                **acq_meta(group),
+                "energy_scale": "channels" if np.array_equal(energy, np.arange(energy.size)) else "daq"}
         meta["running"] = meta["end_time"] is None
         if meta["running"]:
             points = group["Instrument/DLD8080/data/points"][()]

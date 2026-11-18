@@ -51,11 +51,15 @@ class Spectrum:
         return self._convolved(np.ones(k) / k)
 
     def smooth_gauss(self, fwhm: float) -> Spectrum:
-        """Gaussian smoothing; fwhm is in the units of `energy` (channels or eV)."""
-        steps = np.diff(self.energy)
-        step = np.abs(steps).mean()
-        if np.ptp(np.abs(steps)) > 0.01 * step:
-            raise ValueError("smooth_gauss needs an evenly spaced axis; resample with on_grid() first")
+        """Gaussian smoothing; fwhm is in the units of `energy` (channels or eV).
+
+        Also works on an unevenly spaced axis such as a quadratic eV scale, where
+        each bin's counts are spread over its neighbours by energy distance.
+        """
+        steps = np.abs(np.diff(self.energy))
+        step = steps.mean()
+        if np.ptp(steps) > 0.01 * step:
+            return self._with(_gauss_uneven(self.energy, self.intensity, fwhm * FWHM_TO_SIGMA))
         sigma = fwhm * FWHM_TO_SIGMA / step
         half = int(np.ceil(4 * sigma))
         x = np.arange(-half, half + 1)
@@ -91,6 +95,19 @@ class Spectrum:
         ax = ax or plt.gca()
         ax.plot(self.energy, self.intensity, **kw)
         return ax
+
+
+def _gauss_uneven(energy, intensity, sigma):
+    n = energy.size
+    half = int(np.ceil(4 * sigma / np.abs(np.diff(energy)).min()))
+    if 2 * half + 1 > n:
+        raise ValueError(f"smoothing kernel ({2 * half + 1} bins) is longer than the spectrum ({n})")
+    target = np.arange(n)[:, None] + np.arange(-half, half + 1)
+    inside = (target >= 0) & (target < n)
+    target = np.clip(target, 0, n - 1)
+    weights = np.where(inside, np.exp(-0.5 * ((energy[target] - energy[:, None]) / sigma) ** 2), 0.0)
+    weights /= weights.sum(axis=1, keepdims=True)  # each source bin keeps its total counts
+    return np.bincount(target[inside], weights=(weights * intensity[:, None])[inside], minlength=n)
 
 
 def _acquisition_seconds(meta: dict):

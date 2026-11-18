@@ -91,7 +91,7 @@ def calibrate_elastic_sweep(day, acq: int, beamtime: str = "n26", order: int = 1
         group = f[f"acq{acq}"]
         points = group["Instrument/DLD8080/data/points"][()]
         log = group["External/beamline_energy/position"][()]
-        channels = group["data/energy_scale"][()]
+        channels = np.arange(group["data/energy_scale"].shape[0], dtype=float)
         meta = daq.acq_meta(group)
         histogram = daq.dark_corrected_histogram(group)
 
