@@ -13,6 +13,7 @@ from spectrum import (
     combine,
     compare,
     runs_needed,
+    time_needed,
 )
 
 
@@ -120,3 +121,14 @@ def test_runs_needed_scales_with_inverse_square_of_the_target():
     assert runs_needed([flat, flat], target=1 / np.sqrt(200)) == pytest.approx(2)
     assert runs_needed([flat, flat], target=0.5 / np.sqrt(200)) == pytest.approx(8)
     assert runs_needed([flat], target=0.1, lo=10, hi=20) == pytest.approx(1)
+
+
+def test_time_needed_converts_runs_needed_at_the_average_rate():
+    start = datetime(2026, 11, 17)
+    short, long = (Spectrum(np.arange(50.0), np.full(50, 100.0),
+                            {"start_time": start, "end_time": start + timedelta(seconds=s)}) for s in (10, 30))
+    assert time_needed([short, long], target=1 / np.sqrt(200)) == pytest.approx(40)
+    assert time_needed([short, long], target=0.5 / np.sqrt(200)) == pytest.approx(160)
+    running = Spectrum(short.energy, short.intensity, {"start_time": start, "end_time": None})
+    with pytest.raises(ValueError):
+        time_needed([short, running], target=0.1)

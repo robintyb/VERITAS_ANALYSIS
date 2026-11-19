@@ -204,3 +204,19 @@ def runs_needed(spectra, target: float, lo=None, hi=None) -> float:
     if mean <= 0:
         raise ValueError(f"no counts between {lo} and {hi}")
     return len(spectra) / (mean * target ** 2)
+
+
+def time_needed(spectra, target: float, lo=None, hi=None) -> float:
+    """runs_needed as a total acquisition time in seconds.
+
+    Assumes the count rate averaged over the runs given, so time lost to drift and
+    realignment during them is included. Like runs_needed it includes the time
+    already measured: subtract combine(spectra).meta["acquisition_time"] for the
+    time still to measure. Every run needs its start and end time, so a running
+    acquisition raises.
+    """
+    spectra = list(spectra)
+    seconds = combine(spectra).meta["acquisition_time"]
+    if seconds is None:
+        raise ValueError("time_needed needs the start and end time of every run; is one still running?")
+    return runs_needed(spectra, target, lo, hi) / len(spectra) * seconds
