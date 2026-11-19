@@ -148,3 +148,65 @@ def test_matches_sellberg_large_droplets_once_cold():
     c = DropletCooling(12.4, None, None, 0.0, velocity_ms=10.35, x_glycerol=0.0, n_shells=50, max_time=3.1e-3)
     for z, T in [(30.60, 232)]:
         assert c.temperature(z) == pytest.approx(T, abs=3)
+
+
+def test_diagnostics_describe_the_run(cool):
+    d = cool.diagnostics
+    assert d.n_steps == cool.n_steps and d.dt == cool.dt and d.n_shells == 100
+    assert d.dt / d.dt_limit == pytest.approx(0.8)
+    assert d.runtime_s > 0 and d.steps_per_second == pytest.approx(d.n_steps / d.runtime_s)
+    assert d.T_min == pytest.approx(cool._temperature[-1], abs=20)            # surface is colder than the mean
+    assert d.T_min < cool.temperature(cool.max_distance_mm)
+    assert d.max_core_surface_gap > 5                                          # surface leads the cooling
+    x0, x1 = 0.032, float(cool.glycerol_fraction(cool.max_distance_mm))        # glycerol does not evaporate
+    assert d.evaporated_fraction == pytest.approx(1 - (1 - x1) / x1 * x0 / (1 - x0), rel=1e-3)
+    assert d.energy_error < 1e-9
+    assert abs(d.mass_drift) < 0.05
+    assert "stability limit" in str(d)
+
+
+def test_progress_bar_reports_to_stderr(capsys):
+    DropletCooling(**SETUP, max_time=2e-5, progress=True)
+    assert "droplet cooling" in capsys.readouterr().err
+    DropletCooling(**SETUP, max_time=2e-5)
+    assert capsys.readouterr().err == ""
+
+
+def test_progress_without_tqdm_warns_and_still_runs(monkeypatch):
+    monkeypatch.setitem(__import__("sys").modules, "tqdm.auto", None)
+    with pytest.warns(UserWarning, match="tqdm"):
+        c = DropletCooling(**SETUP, max_time=2e-5, progress=True)
+    assert c.temperature(0.1) < 298
+
+
+def test_numpy_backend_can_be_forced_and_is_reported():
+    c = DropletCooling(**SETUP, max_time=2e-5, fast=False)
+    assert c.backend == "numpy" and c.diagnostics.backend == "numpy"
+
+
+def test_missing_numba_falls_back_or_raises(monkeypatch):
+    monkeypatch.setitem(__import__("sys").modules, "droplet_kernel", None)
+    assert DropletCooling(**SETUP, max_time=2e-5).backend == "numpy"
+    with pytest.raises(ImportError, match="numba"):
+        DropletCooling(**SETUP, max_time=2e-5, fast=True)
+
+
+def test_numba_and_numpy_backends_agree():
+    pytest.importorskip("numba")
+    kwargs = {**SETUP, "max_time": 4e-4}
+    slow = DropletCooling(**kwargs, fast=False)
+    fast = DropletCooling(**kwargs, fast=True)
+    assert fast.backend == "numba"
+    for name in ("_temperature", "_x_g", "_radius"):
+        np.testing.assert_allclose(getattr(fast, name), getattr(slow, name), rtol=1e-9)
+    assert fast.diagnostics.evaporated_fraction == pytest.approx(slow.diagnostics.evaporated_fraction, rel=1e-9)
+    assert fast.diagnostics.energy_error < 1e-9
+
+
+def test_numba_agrees_for_a_small_droplet_with_few_shells_and_pure_water():
+    pytest.importorskip("numba")
+    kwargs = {"diameter_um": 8.7, "spacing_um": None, "frequency_hz": None, "pressure_pa": 0.0,
+              "velocity_ms": 19.23, "x_glycerol": 0.0, "n_shells": 30, "max_time": 3e-4}
+    slow = DropletCooling(**kwargs, fast=False)
+    fast = DropletCooling(**kwargs, fast=True)
+    np.testing.assert_allclose(fast._temperature, slow._temperature, rtol=1e-9)

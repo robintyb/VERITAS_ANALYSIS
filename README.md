@@ -40,6 +40,11 @@ cp config.example.toml config.local.toml
 `dev` is an extra, so pass `--extra dev`, not `--group dev`. A plain `uv sync`
 removes the dev tools.
 
+`fast` is an optional extra (numba). It compiles the `droplet_temperature` simulation loop,
+which takes a default run from about 11 s to under a second with identical results:
+`uv sync --extra dev --extra fast`. Without it everything still works, in numpy. Any `uv sync` that
+leaves `--extra fast` out removes numba again, so repeat it each time.
+
 Run `uv sync` in a terminal on the machine where your Jupyter kernel runs
 (on JupyterHub: **File → New → Terminal**). The install records absolute
 paths, and on some nodes `/data/visitors` is a link to another path. A
