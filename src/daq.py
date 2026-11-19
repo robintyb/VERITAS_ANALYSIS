@@ -66,6 +66,7 @@ def _time(group, name):
 
 
 MANIPULATOR = "a_mp1_"
+TIMEZONE = "Europe/Stockholm"  # the DAQ's start_time/end_time are local; its logs are unix time
 
 
 def _log(group, name) -> np.ndarray:
@@ -87,6 +88,28 @@ def _manipulator(group) -> dict:
         log = _log(group, f"{axis}/position")
         positions[axis] = float(log[:, 1].mean()) if len(log) else _position(start, axis)
     return positions
+
+
+def manipulator_log(day, acqs=None, beamtime: str = "n26") -> pd.DataFrame:
+    """The sample-manipulator positions logged during the acquisitions, one row per sample.
+
+    Columns: time (datetime64, local like start_time), acq, and one column per a_mp1_<axis> that has an
+    External log (azim, x, y, yaw, z), in the DAQ's units. The log is sampled about once a
+    second while an acquisition counts, so there are gaps between acquisitions.
+    `acqs` selects acquisitions (default all); one whose log is not readable is skipped.
+    """
+    frames = []
+    with open_h5(rixs_file(day, beamtime)) as f:
+        for acq in sorted(int(n[3:]) for n in f if n.startswith("acq")) if acqs is None else acqs:
+            group = f[f"acq{acq}"]
+            axes = {}
+            for axis in sorted(n for n in group["startmetadata"] if n.startswith(MANIPULATOR)):
+                log = _log(group, f"{axis}/position")
+                if len(log):
+                    axes[axis] = pd.Series(log[:, 1], index=pd.to_datetime(log[:, 0], unit="s", utc=True).tz_convert(TIMEZONE).tz_localize(None))
+            if axes:
+                frames.append(pd.DataFrame(axes).rename_axis("time").reset_index().assign(acq=acq))
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
 
 def acq_meta(group) -> dict:
