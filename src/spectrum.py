@@ -90,6 +90,15 @@ class Spectrum:
         return replace(self, energy=grid,
                        intensity=np.interp(grid, self.energy[order], self.intensity[order], left=0, right=0))
 
+    def binned(self, k: int) -> Spectrum:
+        """Sum the counts of every k neighbouring bins; the energy is each group's mean.
+
+        Bins left over at the end are dropped.
+        """
+        n = len(self) // k * k
+        return replace(self, energy=self.energy[:n].reshape(-1, k).mean(1),
+                       intensity=self.intensity[:n].reshape(-1, k).sum(1))
+
     def plot(self, ax=None, **kw):
         import matplotlib.pyplot as plt
         ax = ax or plt.gca()
@@ -143,3 +152,55 @@ def average(spectra, grid=None) -> Spectrum:
     grid = spectra[0].energy if grid is None else grid
     stack = np.stack([s.on_grid(grid).intensity for s in spectra])
     return Spectrum(grid, stack.mean(axis=0), {"parts": [s.meta for s in spectra]})
+
+
+def _normalised_with_sigma(s: Spectrum):
+    area = np.trapezoid(s.intensity, x=s.energy)
+    return s.intensity / area, np.sqrt(np.clip(np.abs(s.intensity), 1, None)) / area
+
+
+def _window(s: Spectrum, lo, hi) -> np.ndarray:
+    return (s.energy >= (-np.inf if lo is None else lo)) & (s.energy <= (np.inf if hi is None else hi))
+
+
+def compare(spectra, lo=None, hi=None) -> list[tuple[float, Spectrum]]:
+    """Reduced chi2 and pull of each raw-count run against the sum of the other runs.
+
+    All are normalised to unit area. A pull is the run minus the others, in units
+    of their combined Poisson error, and carries the run's meta; the reduced chi2
+    is its mean square between lo and hi. About 1 means the run differs from the
+    rest only by counting noise, so it can be combined with them; the run with the
+    largest value is the odd one out. With two runs both results are the same
+    comparison, mirrored. The Poisson error leaves out the noise of the dark counts
+    the DAQ subtracts, so expect a little above 1 for DAQ spectra.
+    """
+    spectra = list(spectra)
+    if len(spectra) < 2:
+        raise ValueError("compare needs at least two spectra")
+    if any(not np.array_equal(s.energy, spectra[0].energy) for s in spectra):
+        raise ValueError("compare needs identical energy axes")
+    results = []
+    for i, run in enumerate(spectra):
+        others = combine(spectra[:i] + spectra[i + 1:])
+        (y, sigma), (yo, sigma_o) = _normalised_with_sigma(run), _normalised_with_sigma(others)
+        pull = Spectrum(run.energy, (y - yo) / np.hypot(sigma, sigma_o), run.meta)
+        inside = pull.intensity[_window(pull, lo, hi)]
+        results.append((float(np.sum(inside ** 2) / (inside.size - 1)), pull))
+    return results
+
+
+def runs_needed(spectra, target: float, lo=None, hi=None) -> float:
+    """How many runs like these to combine for a relative counting error of `target` per bin.
+
+    The answer is a total that includes the runs given, counted in runs of their
+    average length, so subtract len(spectra) for the number still to measure.
+    The error is taken at the mean counts per bin between lo and hi, so bin the runs
+    first (Spectrum.binned) to judge it at the resolution you plot. It falls as
+    1/sqrt(counts): halving the target takes four times the runs.
+    """
+    spectra = list(spectra)
+    total = combine(spectra)
+    mean = total.intensity[_window(total, lo, hi)].mean()
+    if mean <= 0:
+        raise ValueError(f"no counts between {lo} and {hi}")
+    return len(spectra) / (mean * target ** 2)
