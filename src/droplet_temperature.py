@@ -21,7 +21,10 @@ temperatures agree with the paper to a few K rather than exactly.
 """
 from __future__ import annotations
 
+import math
+import time
 import warnings
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -36,12 +39,21 @@ _RHO_W_T = [228.0, 235.0, 240.0, 250.0, 260.0, 277.0, 310.0]
 _RHO_W = [957.0, 972.0, 982.0, 993.0, 998.0, 1000.0, 1000.0]
 
 
+def _is_scalar(T):
+    return np.ndim(T) == 0
+
+
+def _murphy_koop(T, m):
+    return m.exp(54.842763 - 6763.22 / T - 4.210 * m.log(T) + 0.000367 * T
+                 + m.tanh(0.0415 * (T - 218.8))
+                 * (53.878 - 1331.22 / T - 9.44523 * m.log(T) + 0.014025 * T))
+
+
 def p_vap_water(T):
     """Saturation vapour pressure of supercooled liquid water in Pa (Murphy & Koop 2005)."""
-    T = np.asarray(T, dtype=float)
-    return np.exp(54.842763 - 6763.22 / T - 4.210 * np.log(T) + 0.000367 * T
-                  + np.tanh(0.0415 * (T - 218.8))
-                  * (53.878 - 1331.22 / T - 9.44523 * np.log(T) + 0.014025 * T))
+    if _is_scalar(T):                      # plain floats: math is several times faster than numpy
+        return _murphy_koop(float(T), math)
+    return _murphy_koop(np.asarray(T, dtype=float), np)
 
 
 def density(T, w_g):
@@ -72,9 +84,9 @@ def vapor_pressure(T, x_g):
 
 def vaporization_enthalpy(T, x_g):
     """Enthalpy of vaporisation in J/mol (S25); pure water is linear in T (Supplementary Fig. 7C)."""
-    T = np.asarray(T, dtype=float)
+    T = float(T) if _is_scalar(T) else np.asarray(T, dtype=float)
     dh_w = 1e3 * (44.0 + 0.05 * (300.0 - T))
-    return -R_GAS * T * np.log(1 - x_g) + dh_w
+    return -R_GAS * T * math.log(1 - x_g) + dh_w
 
 
 def mass_fraction(x_g):
@@ -106,6 +118,83 @@ def stable_time_step(radius, n_shells, T, x_g):
     return float(np.min(heat_per_K / G_total))
 
 
+def _advance_numpy(T, state, n_steps, dt, pressure, gamma, n_g, n_w, volume_unit, face_unit):
+    """Advance T (in place) and state = [volume, n_evap, latent_total, stored_total] by n_steps.
+
+    The reference time-stepping loop; droplet_kernel.advance is the compiled twin.
+    """
+    N = T.size
+    m_water = M_WATER / N_A
+    for _ in range(n_steps):
+        V, n_evap = state[0], state[1]
+        r = (3 * V / (4 * np.pi)) ** (1 / 3)
+        x_g = n_g / (n_g + n_w - n_evap)
+        w_g = mass_fraction(x_g)
+        shell_volume = volume_unit * r ** 3
+        dr = r / N
+        rho, cp, kappa = density(T, w_g), heat_capacity(T, w_g), conductivity(T, w_g)
+        heat_per_K = cp * shell_volume * rho                        # J/K per shell
+
+        # heat flowing into shell i from shell i+1 (S17); inner shell is a full sphere
+        q = 0.5 * (kappa[:-1] + kappa[1:]) * face_unit * (r ** 2 / dr) * (T[1:] - T[:-1])
+        Q = np.zeros(N)
+        Q[:-1] += q
+        Q[1:] -= q
+        dT = Q * dt / heat_per_K                                    # S18
+
+        # Knudsen evaporation from the outer shell (S15, S16)
+        Ts = float(T[-1])
+        p_eff = max(vapor_pressure(Ts, x_g) - pressure, 0.0)
+        rate = gamma * p_eff * 4 * np.pi * r ** 2 / math.sqrt(2 * np.pi * m_water * K_B * Ts)
+        dn = rate * dt
+        latent = dn * vaporization_enthalpy(Ts, x_g) / N_A
+        dT[-1] -= latent / heat_per_K[-1]
+        state[2] += latent
+        state[3] += heat_per_K @ dT
+        T += dT
+
+        state[0] = V - dn * m_water / np.interp(Ts, _RHO_W_T, _RHO_W)   # S19, molar volume of water
+        state[1] = n_evap + dn
+
+
+@dataclass(frozen=True)
+class Diagnostics:
+    """How a `DropletCooling` run went; `print(cool.diagnostics)` for a summary.
+
+    backend : "numba" or "numpy", the loop that ran.
+    runtime_s, n_steps, steps_per_second : cost of the simulation.
+    dt, dt_limit : time step used and the explicit stability limit (dt/dt_limit must stay below 1).
+    T_min : coldest shell temperature reached (K).
+    max_core_surface_gap : largest core minus outer-shell temperature seen (K); how far
+        "one droplet temperature" is from true.
+    evaporated_fraction : fraction of the initial water that evaporated.
+    energy_error : relative mismatch between heat taken from the shells and latent heat
+        removed; ~1e-15 unless the conduction step stops conserving heat.
+    mass_drift : shell mass (density times volume) relative to the mass left after evaporation;
+        the S19 / density inconsistency, a few percent.
+    """
+    backend: str
+    runtime_s: float
+    n_steps: int
+    steps_per_second: float
+    dt: float
+    dt_limit: float
+    n_shells: int
+    T_min: float
+    max_core_surface_gap: float
+    evaporated_fraction: float
+    energy_error: float
+    mass_drift: float
+
+    def __str__(self):
+        return (f"{self.n_steps} steps in {self.runtime_s:.1f} s ({self.steps_per_second:,.0f} steps/s, "
+                f"{self.backend}), {self.n_shells} shells\n"
+                f"dt = {self.dt:.3g} s = {self.dt / self.dt_limit:.2f} x the stability limit {self.dt_limit:.3g} s\n"
+                f"coldest shell {self.T_min:.1f} K, largest core-surface gap {self.max_core_surface_gap:.2f} K\n"
+                f"{100 * self.evaporated_fraction:.2f} % of the water evaporated\n"
+                f"energy error {self.energy_error:.1e}, shell-mass drift {100 * self.mass_drift:+.1f} %")
+
+
 class DropletCooling:
     """Cooling curve of one droplet set-up, computed once and interpolated.
 
@@ -119,12 +208,16 @@ class DropletCooling:
     T0 : initial droplet temperature (K).
     gamma : evaporation coefficient.
     velocity_ms : droplet speed (m/s), instead of frequency * spacing.
-    dt : explicit time step (s). The default picks 10 ns or, for small droplets, 0.8 of the
-        stability limit. An explicit dt above that limit raises ValueError, because the
+    dt : explicit time step (s). The default is 0.8 of the stability limit (15 ns for the paper droplet,
+        shorter for small and much longer for large droplets; results change by under 0.01 K
+        against dt = 2 ns). An explicit dt above the limit raises ValueError, because the
         scheme then diverges quietly.
     max_time : longest flight time simulated (s); distances beyond speed * max_time raise.
     n_shells : number of spherical shells the droplet is divided into.
     record_interval : time between cached points (s).
+    fast : run the loop compiled with numba. None (default) uses numba when it is installed
+        (`uv sync --extra dev --extra fast`) and numpy otherwise; True requires it; False forces numpy.
+    progress : show a progress bar while simulating (tqdm; a notebook bar in Jupyter).
     weighting : "volume" (default) averages the shell temperatures by shell volume, which
         is what a probe of the whole droplet sees; "shell" takes the plain mean over shells.
 
@@ -140,7 +233,7 @@ class DropletCooling:
     def __init__(self, diameter_um, spacing_um, frequency_hz, pressure_pa, *,
                  x_glycerol=0.032, T0=298.0, gamma=1.0, velocity_ms=None,
                  dt=None, max_time=7e-3, n_shells=100, record_interval=1e-6,
-                 weighting="volume"):
+                 weighting="volume", progress=False, fast=None):
         self.diameter_um = diameter_um
         self.spacing_um = spacing_um
         self.frequency_hz = frequency_hz
@@ -154,7 +247,14 @@ class DropletCooling:
         self.dt = self._choose_dt(dt)
         self.n_steps = int(np.ceil(max_time / self.dt))
         self.record_every = max(1, round(record_interval / self.dt))
-        self.time, self._temperature, self._x_g, self._radius = self._simulate()
+        self.progress = progress
+        self._advance, self.backend = self._pick_backend(fast)
+        start = time.perf_counter()
+        self.time, self._temperature, self._x_g, self._radius, extras = self._simulate()
+        runtime = time.perf_counter() - start
+        self.diagnostics = Diagnostics(backend=self.backend, runtime_s=runtime, n_steps=self.n_steps,
+                                       steps_per_second=self.n_steps / runtime, dt=self.dt,
+                                       dt_limit=self._dt_limit, n_shells=self.n_shells, **extras)
 
     def _check_inputs(self, velocity_ms, max_time, record_interval, n_shells):
         def need(ok, msg):
@@ -183,9 +283,10 @@ class DropletCooling:
         return float(velocity_ms)
 
     def _choose_dt(self, dt):
-        limit = stable_time_step(self.diameter_um * 1e-6 / 2, self.n_shells, self.T0, self.x_glycerol)
+        limit = self._dt_limit = stable_time_step(self.diameter_um * 1e-6 / 2, self.n_shells,
+                                                  self.T0, self.x_glycerol)
         if dt is None:
-            return min(10e-9, 0.8 * limit)
+            return 0.8 * limit
         if dt > limit:
             raise ValueError(f"dt={dt:.3g} s exceeds the stability limit {limit:.3g} s for this droplet "
                              f"and n_shells; use dt=None, or fewer shells")
@@ -223,6 +324,28 @@ class DropletCooling:
         """Droplet radius in um at distance z_mm."""
         return self._lookup(self._radius, z_mm) * 1e6
 
+    @staticmethod
+    def _pick_backend(fast):
+        if fast is False:
+            return _advance_numpy, "numpy"
+        try:
+            from droplet_kernel import advance
+        except ImportError as error:
+            if fast:
+                raise ImportError("fast=True needs numba: uv sync --extra dev --extra fast") from error
+            return _advance_numpy, "numpy"
+        return advance, "numba"
+
+    def _progress_bar(self):
+        if not self.progress:
+            return None
+        try:
+            from tqdm.auto import tqdm
+        except ImportError:
+            warnings.warn("progress=True needs tqdm, which is not installed; running without it", stacklevel=3)
+            return None
+        return tqdm(total=self.n_steps, desc="droplet cooling", unit="step", unit_scale=True)
+
     def _simulate(self):
         N, dt = self.n_shells, self.dt
         r0 = self.diameter_um * 1e-6 / 2
@@ -233,52 +356,51 @@ class DropletCooling:
         n_g = self.x_glycerol * n_total
         n_w = n_total - n_g
         m_water = M_WATER / N_A
-        n_evap = 0.0
+        m_initial = V * density(self.T0, w_g0)
+
+        # shells keep their relative proportions as the droplet shrinks, so the geometry is
+        # fixed numbers times a power of the radius
+        k = np.arange(1, N + 1)
+        volume_unit = 4 / 3 * np.pi * (k ** 3 - (k - 1) ** 3) / N ** 3          # shell volume / r^3
+        face_unit = 4 * np.pi * (k[:-1] / N) ** 2                                # interface area / r^2
+        volume_weights = volume_unit if self.weighting == "volume" else None
 
         T = np.full(N, float(self.T0))
-        T_min = self.T0
+        state = np.array([V, 0.0, 0.0, 0.0])             # volume, n_evap, latent heat, heat stored
+        T_min, max_gap = self.T0, 0.0
         n_rec = self.n_steps // self.record_every + 1
-        time = np.arange(n_rec) * self.record_every * dt
+        time_axis = np.arange(n_rec) * self.record_every * dt
         T_mean, x_rec, r_rec = np.empty(n_rec), np.empty(n_rec), np.empty(n_rec)
+        bar = self._progress_bar()
 
-        for step in range(self.n_steps + 1):
-            r = (3 * V / (4 * np.pi)) ** (1 / 3)
-            x_g = n_g / (n_g + n_w - n_evap)
-            dr, r_out, shell_volume = _shell_geometry(r, N)
-            if step % self.record_every == 0:
-                i = step // self.record_every
-                weights = shell_volume if self.weighting == "volume" else None
-                T_mean[i], x_rec[i], r_rec[i] = np.average(T, weights=weights), x_g, r
-                T_min = min(T_min, T.min())
-            if step == self.n_steps:
-                break
+        for i in range(n_rec):
+            r = (3 * state[0] / (4 * np.pi)) ** (1 / 3)
+            x_g = n_g / (n_g + n_w - state[1])
+            T_mean[i], x_rec[i], r_rec[i] = np.average(T, weights=volume_weights), x_g, r
+            T_min = min(T_min, T.min())
+            max_gap = max(max_gap, T[0] - T[-1])
+            steps = self.record_every if i < n_rec - 1 else self.n_steps - i * self.record_every
+            self._advance(T, state, steps, dt, self.pressure_pa, self.gamma, n_g, n_w, volume_unit, face_unit)
+            if bar is not None:
+                bar.update(steps)
+                bar.set_postfix_str(f"T={T_mean[i]:.1f} K, r={r * 1e6:.2f} um", refresh=False)
 
-            w_g = mass_fraction(x_g)
-            rho, cp, kappa = density(T, w_g), heat_capacity(T, w_g), conductivity(T, w_g)
-            heat_per_K = cp * shell_volume * rho                        # J/K per shell
-
-            # heat flowing into shell i from shell i+1 (S17); inner shell is a full sphere
-            q = 0.5 * (kappa[:-1] + kappa[1:]) * 4 * np.pi * r_out[:-1] ** 2 * (T[1:] - T[:-1]) / dr
-            Q = np.zeros(N)
-            Q[:-1] += q
-            Q[1:] -= q
-            dT = Q * dt / heat_per_K                                    # S18
-
-            # Knudsen evaporation from the outer shell (S15, S16)
-            Ts = T[-1]
-            p_eff = max(vapor_pressure(Ts, x_g) - self.pressure_pa, 0.0)
-            rate = self.gamma * p_eff * 4 * np.pi * r ** 2 / np.sqrt(2 * np.pi * m_water * K_B * Ts)
-            dn = rate * dt
-            dT[-1] -= dn * vaporization_enthalpy(Ts, x_g) / N_A / heat_per_K[-1]
-            T += dT
-
-            V -= dn * m_water / np.interp(Ts, _RHO_W_T, _RHO_W)         # S19, molar volume of water
-            n_evap += dn
-
+        V, n_evap, latent_total, stored_total = state
+        if bar is not None:
+            bar.close()
         if not (np.all(np.isfinite(T_mean)) and np.all(np.isfinite(x_rec))):
             raise RuntimeError("the cooling simulation diverged; try a smaller dt or fewer shells")
         if T_min < 225.0:
             warnings.warn(f"droplet cools to {T_min:.1f} K, below the ~228 K range of the property "
                           "fits (heat capacity is extrapolated); treat those temperatures with care",
                           stacklevel=3)
-        return time, T_mean, x_rec, r_rec
+        r_end = (3 * V / (4 * np.pi)) ** (1 / 3)
+        shell_mass = np.sum(volume_unit * r_end ** 3 * density(T, mass_fraction(n_g / (n_g + n_w - n_evap))))
+        extras = {
+            "T_min": float(T_min),
+            "max_core_surface_gap": float(max_gap),
+            "evaporated_fraction": float(n_evap / n_w),
+            "energy_error": float(abs(stored_total + latent_total) / latent_total) if latent_total else 0.0,
+            "mass_drift": float(shell_mass / (m_initial - n_evap * m_water) - 1),
+        }
+        return time_axis, T_mean, x_rec, r_rec, extras

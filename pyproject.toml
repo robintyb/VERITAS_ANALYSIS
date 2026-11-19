@@ -15,16 +15,20 @@ dependencies = [
     "h5py",
     "matplotlib",
     "lmfit",
+    "tqdm",
 ]
 # NOTE: rixsaqlib (VERITAS DLD reader) is not on PyPI; a vendored copy lives
 # in extern/rixsaqlib and is installed alongside the project (see below).
 
 [project.optional-dependencies]
 dev = ["jupyterlab", "ipykernel", "nbstripout", "pre-commit", "pytest", "ruff"]
+fast = [
+    "numba",       # optional: compiled simulation loop for droplet_temperature
+]
 
 [tool.setuptools]
 package-dir = { "" = "src", "rixsaqlib" = "extern/rixsaqlib" }
-py-modules = ["RIXS_functions", "beamtimes", "calibration", "daq", "droplet_temperature", "fitting_functions", "spectrum", "veritas_paths"]
+py-modules = ["RIXS_functions", "beamtimes", "calibration", "daq", "droplet_kernel", "droplet_temperature", "fitting_functions", "spectrum", "veritas_paths"]
 packages = ["rixsaqlib"]
 
 # Pylance/Pyright can't follow setuptools' editable-install import hook, so
