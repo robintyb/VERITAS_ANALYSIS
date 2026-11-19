@@ -127,6 +127,7 @@ Each file in `src/` is a module you import by name:
 |---|---|
 | `daq` | n26 and later: load acquisitions by `(day, acq)`, scans, and the run log |
 | `spectrum` | `Spectrum`, an immutable (energy, intensity, meta) value, and `combine` / `average` |
+| `droplet_temperature` | `DropletCooling`: Knudsen-model temperature of an evaporatively cooled microdroplet vs. travel distance |
 | `calibration` | Energy scales: fit an elastic sweep, save a scale, look one up |
 | `fitting_functions` (`ff`) | lmfit peak models and `residual` |
 | `RIXS_functions` (`rf`) | The older API for d22, m23, f24 and m24: `filter_samples`, `load_from_index`, `RIXS_run` |

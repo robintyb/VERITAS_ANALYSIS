@@ -101,3 +101,11 @@ first_acq  = 46
 arm_energy = 528.0
 offset_eV  = 3.0
 reference  = "escale_n26_2 (arm 525, acq43 sweep) + 3.0 eV for arm 528; not measured"
+
+[[n26]]
+file       = "escale_n26_2.npy"
+day        = "20261117"
+first_acq  = 51
+arm_energy = 525.0
+offset_eV  = 3.0
+reference  = "escale_n26_2 (arm 525, acq43 sweep) + 3.0 eV for arm 528; not measured"
