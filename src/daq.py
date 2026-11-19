@@ -65,10 +65,35 @@ def _time(group, name):
     return datetime.fromisoformat(group[name][()].decode())
 
 
+MANIPULATOR = "a_mp1_"
+
+
+def _log(group, name) -> np.ndarray:
+    """(unix time, value) rows of External/<name>; empty if there is no log or it can't
+    be read yet (a running acquisition: the DAQ has written past our view of the file)."""
+    try:
+        return group[f"External/{name}"][()]
+    except (KeyError, OSError):
+        return np.empty((0, 2))
+
+
+def _manipulator(group) -> dict:
+    """{a_mp1_<axis>: position} for every sample-manipulator axis: the mean of the
+    acquisition's External log (sampled about once a second while it counts), or the
+    startmetadata value where there is no readable log (a_mp1_tilt, running acquisitions)."""
+    start = group["startmetadata"]
+    positions = {}
+    for axis in sorted(name for name in start if name.startswith(MANIPULATOR)):
+        log = _log(group, f"{axis}/position")
+        positions[axis] = float(log[:, 1].mean()) if len(log) else _position(start, axis)
+    return positions
+
+
 def acq_meta(group) -> dict:
     """Start/end metadata. The start values are saved before the acquisition and can
     be stale (n26 acq35: the arm reached 528 eV just before counting, start says 523),
-    so arm_energy_end is kept too; it is nan while an acquisition is running."""
+    so arm_energy_end is kept too; it is nan while an acquisition is running.
+    The a_mp1_<axis> manipulator positions are averages over the acquisition."""
     start, end = group["startmetadata"], group.get("endmetadata", {})
     return {
         "beamline_energy": _position(start, "beamline_energy"),
@@ -76,7 +101,37 @@ def acq_meta(group) -> dict:
         "arm_energy_end": _position(end, "veritasarm_energy"),
         "start_time": _time(group, "start_time"),
         "end_time": _time(group, "end_time"),
+        **_manipulator(group),
     }
+
+
+def _scalars(group) -> dict:
+    """{"motor/field": value} for every dataset under group; bytes decoded to str."""
+    values = {}
+
+    def add(name, obj):
+        if isinstance(obj, h5py.Dataset):
+            value = obj[()]
+            values[name] = value.decode() if isinstance(value, bytes) else value
+    group.visititems(add)
+    return values
+
+
+def acq_metadata(group) -> dict:
+    """Everything the DAQ saved about an acquisition besides the detector data:
+    "startmetadata" and "endmetadata" as {"motor/field": value} (endmetadata is empty
+    while the acquisition runs), and "external" as {"motor/field": array} of
+    (unix time, value) rows logged during the acquisition. The External log of a
+    running acquisition is usually not readable yet; it is then {} and a warning says so."""
+    def read(name):
+        return _scalars(group[name]) if name in group else {}
+    try:
+        external = read("External")
+    except (OSError, RuntimeError) as e:
+        warnings.warn(f"{group.name}: External log not readable yet ({e}); left empty", stacklevel=3)
+        external = {}
+    return {"startmetadata": read("startmetadata"), "endmetadata": read("endmetadata"),
+            "external": external}
 
 
 def arm_moved(meta: dict) -> bool:
@@ -130,6 +185,9 @@ def load_acq(day, acq: int, beamtime: str = "n26", calibrated: bool = False) -> 
     DAQ's eV axis is kept, and a channel axis raises LookupError. The DAQ writes the
     spectrum only when an acquisition ends, so for one still running it is
     rebuilt from the points recorded so far (meta["running"] is True).
+
+    Besides the acq_meta summary (including the mean a_mp1_<axis> manipulator
+    positions), meta holds all saved metadata: see acq_metadata.
     """
     path = rixs_file(day, beamtime)
     with open_h5(path) as f:
@@ -137,7 +195,8 @@ def load_acq(day, acq: int, beamtime: str = "n26", calibrated: bool = False) -> 
         energy = group["data/energy_scale"][()]
         meta = {"beamtime": beamtime, "day": str(day), "acq": int(acq), "file": str(path),
                 **acq_meta(group),
-                "energy_scale": "channels" if np.array_equal(energy, np.arange(energy.size)) else "daq"}
+                "energy_scale": "channels" if np.array_equal(energy, np.arange(energy.size)) else "daq",
+                **acq_metadata(group)}
         meta["running"] = meta["end_time"] is None
         if meta["running"]:
             points = group["Instrument/DLD8080/data/points"][()]
