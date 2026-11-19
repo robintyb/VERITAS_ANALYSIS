@@ -6,7 +6,14 @@ import numpy as np
 import pytest
 
 import fitting_functions as ff
-from spectrum import FWHM_TO_SIGMA, Spectrum, _gauss_uneven, combine
+from spectrum import (
+    FWHM_TO_SIGMA,
+    Spectrum,
+    _gauss_uneven,
+    combine,
+    compare,
+    runs_needed,
+)
 
 
 def peak(n=400, centre=200.0, counts=1000.0, start=None, seconds=10, arm=525.0):
@@ -77,3 +84,39 @@ def test_smooth_gauss_on_an_uneven_axis_keeps_counts_and_matches_even_case():
     even = peak()
     spread = _gauss_uneven(even.energy, even.intensity, 10 * FWHM_TO_SIGMA)
     assert np.allclose(spread[50:350], even.smooth_gauss(10).intensity[50:350])
+
+
+def test_binned_sums_counts_and_averages_energy():
+    s = Spectrum(np.arange(10.0), np.arange(10.0))
+    b = s.binned(3)
+    assert np.array_equal(b.energy, [1, 4, 7])
+    assert np.array_equal(b.intensity, [3, 12, 21])
+
+
+def test_compare_checks_each_run_against_the_others_and_finds_the_odd_one():
+    rng = np.random.default_rng(0)
+    expected = peak(n=2000, centre=1000, counts=2e5).intensity + 20
+    a, b, c = (Spectrum(np.arange(2000.0), rng.poisson(expected), {"acq": i}) for i in range(3))
+    results = compare([a, b, c])
+    assert [chi2 for chi2, _ in results] == pytest.approx([1, 1, 1], abs=0.1)
+    assert [pull.meta["acq"] for _, pull in results] == [0, 1, 2]
+    assert np.array_equal(results[0][1].energy, a.energy)
+
+    odd = Spectrum(a.energy, np.roll(c.intensity, 5))
+    chi2s = [chi2 for chi2, _ in compare([a, b, odd])]
+    assert chi2s[2] > 3 and chi2s[2] == max(chi2s)
+
+    (chi2_a, pull_a), (chi2_b, pull_b) = compare([a, b])
+    assert chi2_a == pytest.approx(chi2_b)
+    assert np.allclose(pull_a.intensity, -pull_b.intensity)
+    with pytest.raises(ValueError):
+        compare([a])
+    with pytest.raises(ValueError):
+        compare([a, a.shifted(1)])
+
+
+def test_runs_needed_scales_with_inverse_square_of_the_target():
+    flat = Spectrum(np.arange(50.0), np.full(50, 100.0))
+    assert runs_needed([flat, flat], target=1 / np.sqrt(200)) == pytest.approx(2)
+    assert runs_needed([flat, flat], target=0.5 / np.sqrt(200)) == pytest.approx(8)
+    assert runs_needed([flat], target=0.1, lo=10, hi=20) == pytest.approx(1)
