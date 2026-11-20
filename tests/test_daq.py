@@ -45,3 +45,36 @@ def test_acq_metadata_keeps_everything_saved(tmp_path):
     assert meta["endmetadata"]["a_mp1_x/position"] == -1.05
     np.testing.assert_array_equal(meta["external"]["a_mp1_x/position"][:, 0], [1.0, 2.0, 3.0])
     assert meta["external"]["b316a-ea05/vac/vgcp-01/pressure"].shape == (1, 2)
+
+
+@pytest.fixture
+def raw_files(tmp_path, monkeypatch):
+    """Two RIXS files whose acq numbers continue from one to the next, as n26's do."""
+    for day, acqs in [("20261117", [0, 1]), ("20261120", [2])]:
+        with h5py.File(tmp_path / f"W47_{day}_RIXS.h5", "w") as f:
+            for acq in acqs:
+                f.create_group(f"acq{acq}")
+    monkeypatch.setattr(daq, "raw_data_dir", lambda beamtime: tmp_path)
+    return tmp_path
+
+
+def test_acq_file_finds_an_acquisition_in_whichever_file_holds_it(raw_files):
+    assert daq.acq_file(1).name == "W47_20261117_RIXS.h5"
+    assert daq.acq_file(2).name == "W47_20261120_RIXS.h5"
+    assert daq._all_acqs("n26") == [0, 1, 2]
+
+
+def test_acq_file_raises_for_a_missing_or_repeated_acquisition(raw_files):
+    with pytest.raises(KeyError, match="acq7 .* found it in none"):
+        daq.acq_file(7)
+    with h5py.File(raw_files / "W47_20261121_RIXS.h5", "w") as f:
+        f.create_group("acq2")
+    with pytest.raises(KeyError, match="W47_20261120_RIXS.h5, W47_20261121_RIXS.h5"):
+        daq.acq_file(2)
+
+
+def test_acq_file_skips_a_file_the_daq_is_writing(raw_files):
+    (raw_files / "W47_20261121_RIXS.h5").write_bytes(b"not hdf5 yet")
+    assert daq.acq_file(1).name == "W47_20261117_RIXS.h5"
+    with pytest.raises(KeyError, match="could not open W47_20261121_RIXS.h5"):
+        daq.acq_file(7)

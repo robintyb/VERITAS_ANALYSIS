@@ -1,9 +1,11 @@
 """Reading the per-session DAQ files of current beamtimes (n26 onwards).
 
-Raw files are `<prefix>_<day>_RIXS.h5` (groups `acq0..acqN`) and
-`<prefix>_<day>_Scan.h5` (groups `entryNNNNN`) in `raw_data_dir(beamtime)`.
-`day` is the YYYYMMDD in the file name. A file is one DAQ session and can
-run past midnight, so an acquisition is identified by (day, acq).
+Raw files are `<prefix>_<day>_RIXS.h5` (groups `acqN`) and
+`<prefix>_<day>_Scan.h5` (groups `entryN`) in `raw_data_dir(beamtime)`.
+`day` is the YYYYMMDD in the file name. The DAQ starts a new file now and
+then, but acq and entry numbers keep counting across files (n26:
+W47_20261120_RIXS.h5 starts at acq104), so an acquisition is identified by its
+number alone and `acq_file` / `entry_file` find the file that holds it.
 
 The DAQ appends to the RIXS file while people analyse it, so every file is
 opened read-only without HDF5 file locking.
@@ -47,9 +49,48 @@ def scan_file(day, beamtime: str = "n26") -> Path:
     return _daq_file(beamtime, day, "Scan")
 
 
+def _day(path: Path) -> str:
+    return path.name.split("_")[-2]
+
+
 def days(beamtime: str = "n26") -> list[str]:
     """The `day` of every RIXS file in the beamtime's raw-data folder."""
-    return sorted(p.name.split("_")[-2] for p in raw_data_dir(beamtime).glob("*_RIXS.h5"))
+    return sorted(_day(p) for p in raw_data_dir(beamtime).glob("*_RIXS.h5"))
+
+
+def _file_holding(beamtime: str, kind: str, group: str) -> Path:
+    folder = raw_data_dir(beamtime)
+    found, unreadable = [], []
+    for path in sorted(folder.glob(f"*_{kind}.h5")):
+        try:
+            with open_h5(path) as f:
+                if group in f:
+                    found.append(path)
+        except OSError as e:  # "truncated file" while the DAQ writes it; readable again a moment later
+            unreadable.append(f"{path.name} ({e})")
+    if len(found) != 1:
+        where = ", ".join(p.name for p in found) or "none"
+        skipped = f"; could not open {', '.join(unreadable)}" if unreadable else ""
+        raise KeyError(f"expected {group} in one *_{kind}.h5 in {folder}, found it in {where}{skipped}")
+    return found[0]
+
+
+def acq_file(acq: int, beamtime: str = "n26") -> Path:
+    """The RIXS file that holds acq<acq>."""
+    return _file_holding(beamtime, "RIXS", f"acq{acq}")
+
+
+def entry_file(entry: int, beamtime: str = "n26") -> Path:
+    """The Scan file that holds entry<entry>."""
+    return _file_holding(beamtime, "Scan", f"entry{entry}")
+
+
+def _all_acqs(beamtime: str) -> list[int]:
+    acqs = []
+    for path in raw_data_dir(beamtime).glob("*_RIXS.h5"):
+        with open_h5(path) as f:
+            acqs += [int(name[3:]) for name in f if name.startswith("acq")]
+    return sorted(acqs)
 
 
 def _position(group, name):
@@ -90,25 +131,26 @@ def _manipulator(group) -> dict:
     return positions
 
 
-def manipulator_log(day, acqs=None, beamtime: str = "n26") -> pd.DataFrame:
+def manipulator_log(acqs=None, *, beamtime: str = "n26") -> pd.DataFrame:
     """The sample-manipulator positions logged during the acquisitions, one row per sample.
 
     Columns: time (datetime64, local like start_time), acq, and one column per a_mp1_<axis> that has an
     External log (azim, x, y, yaw, z), in the DAQ's units. The log is sampled about once a
     second while an acquisition counts, so there are gaps between acquisitions.
-    `acqs` selects acquisitions (default all); one whose log is not readable is skipped.
+    `acqs` selects acquisitions (default all, in every RIXS file); one whose log is not
+    readable is skipped.
     """
     frames = []
-    with open_h5(rixs_file(day, beamtime)) as f:
-        for acq in sorted(int(n[3:]) for n in f if n.startswith("acq")) if acqs is None else acqs:
+    for acq in _all_acqs(beamtime) if acqs is None else acqs:
+        with open_h5(acq_file(acq, beamtime)) as f:
             group = f[f"acq{acq}"]
             axes = {}
             for axis in sorted(n for n in group["startmetadata"] if n.startswith(MANIPULATOR)):
                 log = _log(group, f"{axis}/position")
                 if len(log):
                     axes[axis] = pd.Series(log[:, 1], index=pd.to_datetime(log[:, 0], unit="s", utc=True).tz_convert(TIMEZONE).tz_localize(None))
-            if axes:
-                frames.append(pd.DataFrame(axes).rename_axis("time").reset_index().assign(acq=acq))
+        if axes:
+            frames.append(pd.DataFrame(axes).rename_axis("time").reset_index().assign(acq=acq))
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
 
@@ -191,13 +233,13 @@ def dark_corrected_histogram(group):
     return histogram
 
 
-def acq_info(day, acq: int, beamtime: str = "n26") -> dict:
+def acq_info(acq: int, *, beamtime: str = "n26") -> dict:
     """Beamline and arm energy, start and end time of one acquisition."""
-    with open_h5(rixs_file(day, beamtime)) as f:
+    with open_h5(acq_file(acq, beamtime)) as f:
         return acq_meta(f[f"acq{acq}"])
 
 
-def load_acq(day, acq: int, beamtime: str = "n26", calibrated: bool = False) -> Spectrum:
+def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False) -> Spectrum:
     """The DAQ's dark-corrected spectrum of one acquisition.
 
     On the axis the DAQ stored in data/energy_scale: detector channels, or eV once
@@ -212,11 +254,11 @@ def load_acq(day, acq: int, beamtime: str = "n26", calibrated: bool = False) -> 
     Besides the acq_meta summary (including the mean a_mp1_<axis> manipulator
     positions), meta holds all saved metadata: see acq_metadata.
     """
-    path = rixs_file(day, beamtime)
+    path = acq_file(acq, beamtime)
     with open_h5(path) as f:
         group = f[f"acq{acq}"]
         energy = group["data/energy_scale"][()]
-        meta = {"beamtime": beamtime, "day": str(day), "acq": int(acq), "file": str(path),
+        meta = {"beamtime": beamtime, "day": _day(path), "acq": int(acq), "file": str(path),
                 **acq_meta(group),
                 "energy_scale": "channels" if np.array_equal(energy, np.arange(energy.size)) else "daq",
                 **acq_metadata(group)}
@@ -235,7 +277,7 @@ def load_acq(day, acq: int, beamtime: str = "n26", calibrated: bool = False) -> 
     if calibrated:
         from calibration import energy_scale_for  # calibration imports daq
         try:
-            energy, entry = energy_scale_for(beamtime, day, acq)
+            energy, entry = energy_scale_for(beamtime, acq)
             meta["energy_scale"] = entry["file"]
         except LookupError:
             if meta["energy_scale"] != "daq":
@@ -250,16 +292,16 @@ def _scanned_motor(title: str, measurement) -> str:
     return "mono_energy_calib"
 
 
-def load_scan(day, entry: int, channel: str = "aemslit_ch1", x: str | None = None,
+def load_scan(entry: int, *, channel: str = "aemslit_ch1", x: str | None = None,
               beamtime: str = "n26") -> Spectrum:
     """One channel of a Scan-file entry against the scanned motor (or `x`)."""
-    path = scan_file(day, beamtime)
+    path = entry_file(entry, beamtime)
     with open_h5(path) as f:
         group = f[f"entry{entry}"]
         title = group["title"][()].decode()
         measurement = group["measurement"]
         x = x or _scanned_motor(title, measurement)
-        meta = {"beamtime": beamtime, "day": str(day), "entry": int(entry), "file": str(path),
+        meta = {"beamtime": beamtime, "day": _day(path), "entry": int(entry), "file": str(path),
                 "title": title, "x": x, "channel": channel}
         return Spectrum(measurement[x][()], measurement[channel][()], meta)
 
@@ -278,26 +320,26 @@ def run_log(beamtime: str = "n26") -> pd.DataFrame:
 _LOG_COLUMNS = ["sample", "comments"]
 
 
-def _log_for(day: str, beamtime: str) -> pd.DataFrame:
+def _log_for(beamtime: str) -> pd.DataFrame:
     try:
         log = run_log(beamtime)
     except (KeyError, FileNotFoundError) as e:
         warnings.warn(f"no run log for {beamtime} ({e}); sample and comments left empty", stacklevel=3)
         return pd.DataFrame(columns=["acq", *_LOG_COLUMNS]).astype({"acq": "Int64"})
-    log = log[(log["day"] == day) & log["acq"].notna()]
+    log = log[log["acq"].notna()]
     return log.drop_duplicates("acq")[["acq", *_LOG_COLUMNS]]
 
 
-def list_acqs(day, beamtime: str = "n26") -> pd.DataFrame:
-    """One row per acquisition in a RIXS file, with sample and comments from the run log."""
-    day = str(day)
+def list_acqs(*, beamtime: str = "n26") -> pd.DataFrame:
+    """One row per acquisition in the beamtime's RIXS files, with sample and comments from the run log."""
     rows = []
-    with open_h5(rixs_file(day, beamtime)) as f:
-        for name in f:
-            if not name.startswith("acq"):
-                continue
-            group = f[name]
-            rows.append({"day": day, "acq": int(name[3:]), **acq_meta(group),
-                         "n_points": group["Instrument/DLD8080/data/points"].shape[0]})
+    for path in raw_data_dir(beamtime).glob("*_RIXS.h5"):
+        with open_h5(path) as f:
+            for name in f:
+                if not name.startswith("acq"):
+                    continue
+                group = f[name]
+                rows.append({"day": _day(path), "acq": int(name[3:]), **acq_meta(group),
+                             "n_points": group["Instrument/DLD8080/data/points"].shape[0]})
     acqs = pd.DataFrame(rows).sort_values("acq", ignore_index=True).astype({"acq": "Int64"})
-    return acqs.merge(_log_for(day, beamtime), on="acq", how="left")
+    return acqs.merge(_log_for(beamtime), on="acq", how="left")

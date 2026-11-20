@@ -1,13 +1,13 @@
 # Which energy scale each run uses, grouped by beamtime key (as in config.local.toml).
 # The code reads this file: src/beamtimes.py (run-table beamtimes) and
-# src/calibration.py (day/acq beamtimes, n26 onwards).
+# src/calibration.py (acq-numbered beamtimes, n26 onwards).
 #
 # Run-table beamtimes (d22-m24):
 #   first_row / last_row: inclusive, 0-based row in that beamtime's runinfo table
 #     (the `index` passed to RIXS_run). No last_row means "to the end".
-# Day/acq beamtimes (n26 onwards), written by calibration.save_energy_scale:
-#   day: the YYYYMMDD in the raw file name; first_acq / last_acq: inclusive
-#     acquisition range in that file, no last_acq = to the end.
+# Acq-numbered beamtimes (n26 onwards), written by calibration.save_energy_scale:
+#   first_acq / last_acq: inclusive acquisition range; acq numbers keep
+#     counting across raw files, so no last_acq = to the end of the beamtime.
 #   arm_energy: the arm energy (eV) the scale was calibrated at; loading an
 #     acquisition recorded at another arm energy warns.
 #   If several entries cover an acquisition, the last one wins.
@@ -55,7 +55,6 @@ reference = "O2 absorption at 531.2 eV"
 
 [[n26]]
 file       = "escale_n26_1.npy"
-day        = "20261117"
 first_acq  = 37
 last_acq   = 42
 arm_energy = 525.0
@@ -64,7 +63,6 @@ reference  = "elastic sweep acq37 (jet), 519-529 eV, quadratic; 2-polynomial cur
 
 [[n26]]
 file       = "escale_n26_2.npy"
-day        = "20261117"
 first_acq  = 43
 last_acq   = 43
 arm_energy = 525.0
@@ -75,7 +73,6 @@ reference  = "elastic sweep acq43 (capillary), 519-529 eV, quadratic; 6-polynomi
 # 528 eV before the first event, and there is no arm-528 sweep.
 [[n26]]
 file       = "escale_n26_3.npy"
-day        = "20261117"
 first_acq  = 7
 last_acq   = 34
 arm_energy = 523.0
@@ -84,7 +81,6 @@ reference  = "elastic sweep acq36 (jet), 519-527 eV, quadratic; 2-polynomial cur
 
 [[n26]]
 file       = "escale_n26_3.npy"
-day        = "20261117"
 first_acq  = 36
 last_acq   = 36
 arm_energy = 523.0
@@ -96,7 +92,6 @@ reference  = "elastic sweep acq36 (jet), 519-527 eV, quadratic; 2-polynomial cur
 # DAQ's arm-525 calibration, so load it with calibrated=True.
 [[n26]]
 file       = "escale_n26_2.npy"
-day        = "20261117"
 first_acq  = 46
 arm_energy = 528.0
 offset_eV  = 3.0
@@ -104,7 +99,6 @@ reference  = "escale_n26_2 (arm 525, acq43 sweep) + 3.0 eV for arm 528; not meas
 
 [[n26]]
 file       = "escale_n26_2.npy"
-day        = "20261117"
 first_acq  = 51
 arm_energy = 525.0
 offset_eV  = 3.0

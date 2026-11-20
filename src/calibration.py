@@ -5,14 +5,14 @@ energy was stepped (an elastic sweep) into a channel -> eV scale.
 `save_energy_scale` adds it to energy_scales/ with an index.toml entry, and
 `energy_scale_for` finds the scale for an acquisition.
 
-index.toml entries for these beamtimes are keyed by (day, acquisition range)
-and record the arm energy the scale was measured at:
+index.toml entries for these beamtimes are keyed by acquisition range (acq
+numbers keep counting across raw files) and record the arm energy the scale
+was measured at:
 
     [[n26]]
     file       = "escale_n26_1.npy"
-    day        = "20261117"
     first_acq  = 37
-    last_acq   = 45          # omit = to the end of that day's file
+    last_acq   = 45          # omit = to the end of the beamtime
     arm_energy = 525.0
     offset_eV  = 0.0
     reference  = "elastic sweep acq37 (jet), 519-529 eV"
@@ -74,7 +74,7 @@ def _fit_peak(channels, counts, window: int, profile: str):
             "fwhm": p["width_0"].value, "counts": counts[sl].sum()}
 
 
-def calibrate_elastic_sweep(day, acq: int, beamtime: str = "n26", order: int = 1,
+def calibrate_elastic_sweep(acq: int, *, beamtime: str = "n26", order: int = 1,
                             min_plateau_s: float = 30.0, profile: str = "gauss", window: int = 300):
     """Channel -> eV scale from an acquisition during which the beamline energy was stepped.
 
@@ -86,7 +86,7 @@ def calibrate_elastic_sweep(day, acq: int, beamtime: str = "n26", order: int = 1
     Returns (scale, report): scale has one eV value per channel; report has one row
     per plateau, and report.attrs holds the polynomial and the acquisition's metadata.
     """
-    path = daq.rixs_file(day, beamtime)
+    path = daq.acq_file(acq, beamtime)
     with daq.open_h5(path) as f:
         group = f[f"acq{acq}"]
         points = group["Instrument/DLD8080/data/points"][()]
@@ -108,23 +108,22 @@ def calibrate_elastic_sweep(day, acq: int, beamtime: str = "n26", order: int = 1
     coefficients = np.polyfit(report["centre"], report["nominal_eV"], order)
     report["fit_eV"] = np.polyval(coefficients, report["centre"])
     report["residual_eV"] = report["nominal_eV"] - report["fit_eV"]
-    report.attrs = {"beamtime": beamtime, "day": str(day), "acq": int(acq), "order": order,
+    report.attrs = {"beamtime": beamtime, "acq": int(acq), "order": order,
                     "coefficients": coefficients, "arm_energy": meta["arm_energy"]}
     return np.polyval(coefficients, channels), report
 
 
-def _covers(entry: dict, day: str, acq: int) -> bool:
-    return (entry.get("day") == day and entry["first_acq"] <= acq <= entry.get("last_acq", acq))
+def _covers(entry: dict, acq: int) -> bool:
+    return entry["first_acq"] <= acq <= entry.get("last_acq", acq)
 
 
-def energy_scale_for(beamtime: str, day, acq: int) -> tuple[np.ndarray, dict]:
+def energy_scale_for(beamtime: str, acq: int) -> tuple[np.ndarray, dict]:
     """(scale in eV, index entry) for one acquisition; warns if the arm energy differs."""
-    day = str(day)
-    matches = [e for e in read_index().get(beamtime, []) if _covers(e, day, acq)]
+    matches = [e for e in read_index().get(beamtime, []) if _covers(e, acq)]
     if not matches:
-        raise LookupError(f"no energy scale in energy_scales/index.toml covers {beamtime} day {day} acq{acq}")
+        raise LookupError(f"no energy scale in energy_scales/index.toml covers {beamtime} acq{acq}")
     entry = matches[-1]
-    info = daq.acq_info(day, acq, beamtime)
+    info = daq.acq_info(acq, beamtime=beamtime)
     arms = {"start": info["arm_energy"]}
     if np.isfinite(info["arm_energy_end"]):  # nan while the acquisition runs
         arms["end"] = info["arm_energy_end"]
@@ -135,7 +134,7 @@ def energy_scale_for(beamtime: str, day, acq: int) -> tuple[np.ndarray, dict]:
     return np.load(ENERGY_SCALES / entry["file"]) + entry.get("offset_eV", 0.0), entry
 
 
-def save_energy_scale(scale, beamtime: str, day, first_acq: int, arm_energy: float, reference: str,
+def save_energy_scale(scale, beamtime: str, first_acq: int, arm_energy: float, reference: str,
                       last_acq: int | None = None, offset_eV: float = 0.0):
     """Write scale to a new energy_scales/escale_<beamtime>_<n>.npy and append its index.toml entry."""
     taken = [int(m.group(1)) for p in ENERGY_SCALES.glob(f"escale_{beamtime}_*.npy")
@@ -143,7 +142,7 @@ def save_energy_scale(scale, beamtime: str, day, first_acq: int, arm_energy: flo
     path = ENERGY_SCALES / f"escale_{beamtime}_{max(taken, default=0) + 1}.npy"
     if not (np.isfinite(arm_energy) and np.isfinite(offset_eV)):
         raise ValueError(f"arm_energy ({arm_energy}) and offset_eV ({offset_eV}) must be finite")
-    entry = {"file": path.name, "day": str(day), "first_acq": int(first_acq),
+    entry = {"file": path.name, "first_acq": int(first_acq),
              "last_acq": None if last_acq is None else int(last_acq),
              "arm_energy": round(float(arm_energy), 3), "offset_eV": float(offset_eV), "reference": str(reference)}
     lines = [f"{k:<10} = {json.dumps(v)}" for k, v in entry.items() if v is not None]
