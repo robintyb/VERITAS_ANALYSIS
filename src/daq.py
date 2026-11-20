@@ -3,9 +3,10 @@
 Raw files are `<prefix>_<day>_RIXS.h5` (groups `acqN`) and
 `<prefix>_<day>_Scan.h5` (groups `entryN`) in `raw_data_dir(beamtime)`.
 `day` is the YYYYMMDD in the file name. The DAQ starts a new file now and
-then, but acq and entry numbers keep counting across files (n26:
-W47_20261120_RIXS.h5 starts at acq104), so an acquisition is identified by its
-number alone and `acq_file` / `entry_file` find the file that holds it.
+then, but acq numbers keep counting across files (n26: W47_20261120_RIXS.h5
+starts at acq104), so an acquisition or scan entry is identified by its number
+alone and `acq_file` / `entry_file` find the file that holds it. A number found
+in two files raises.
 
 The DAQ appends to the RIXS file while people analyse it, so every file is
 opened read-only without HDF5 file locking.
@@ -140,6 +141,8 @@ def manipulator_log(acqs=None, *, beamtime: str = "n26") -> pd.DataFrame:
     `acqs` selects acquisitions (default all, in every RIXS file); one whose log is not
     readable is skipped.
     """
+    if isinstance(acqs, str):
+        raise TypeError(f"acqs must be acquisition numbers, not {acqs!r}; manipulator_log no longer takes a day")
     frames = []
     for acq in _all_acqs(beamtime) if acqs is None else acqs:
         with open_h5(acq_file(acq, beamtime)) as f:

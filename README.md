@@ -142,8 +142,8 @@ Each file in `src/` is a module you import by name:
 ### n26 data
 
 Acquisitions are addressed by their number alone. The DAQ starts a new raw
-file (`W47_<YYYYMMDD>_RIXS.h5`) now and then, but acq and scan-entry numbers
-keep counting across files, and `daq` finds the file that holds each one.
+file (`W47_<YYYYMMDD>_RIXS.h5`) now and then, but acq numbers keep counting
+across files, and `daq` finds the file that holds each acquisition or scan.
 `meta["day"]` says which file it came from.
 
 ```python

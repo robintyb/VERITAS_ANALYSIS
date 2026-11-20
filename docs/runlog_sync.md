@@ -45,8 +45,8 @@ Rows are identified by `Run name` only. There is no date or file column.
 `acqN` names a group in `W47_<YYYYMMDD>_RIXS.h5` and `entryN` names a scan in
 `W47_<YYYYMMDD>_Scan.h5`. A file is one DAQ session, not one calendar day:
 `W47_20261117_RIXS.h5` holds `acq0` to `acq103` (17 to 20 November). Numbering
-does not restart with a new file: `W47_20261120_RIXS.h5` starts at `acq104`, and
-scan entries keep counting in the same way.
+does not restart with a new file: `W47_20261120_RIXS.h5` starts at `acq104`. All
+scans so far are in `W47_20261117_Scan.h5`.
 
 The "X-ray energy (eV) Veritasrm_energy" column is the spectrometer arm
 energy. For `acq38` the sheet says 525 and the file's `veritasarm_energy`

@@ -78,3 +78,8 @@ def test_acq_file_skips_a_file_the_daq_is_writing(raw_files):
     assert daq.acq_file(1).name == "W47_20261117_RIXS.h5"
     with pytest.raises(KeyError, match="could not open W47_20261121_RIXS.h5"):
         daq.acq_file(7)
+
+
+def test_manipulator_log_rejects_an_old_style_day(raw_files):
+    with pytest.raises(TypeError, match="no longer takes a day"):
+        daq.manipulator_log("20261117")
