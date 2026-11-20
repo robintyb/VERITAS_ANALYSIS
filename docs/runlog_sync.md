@@ -26,7 +26,7 @@ python tools/fetch_runlog.py n26
 
 It prints `wrote <path> (N rows)` or `unchanged <path> (N rows)`. Code finds
 the output through `veritas_paths.runlog_csv('n26')`; `daq.run_log('n26')`
-loads it and `daq.list_acqs(day)` joins it to the acquisitions in a raw file. A notebook can refresh
+loads it and `daq.list_acqs()` joins it to the acquisitions in the raw files. A notebook can refresh
 before loading with `!python ../../tools/fetch_runlog.py n26`.
 
 To keep the CSV current without thinking about it, run a loop in a terminal
@@ -44,9 +44,9 @@ The sheet has two tabs. "Run table" (`gid=0`) is the run log. "Shift Plan"
 Rows are identified by `Run name` only. There is no date or file column.
 `acqN` names a group in `W47_<YYYYMMDD>_RIXS.h5` and `entryN` names a scan in
 `W47_<YYYYMMDD>_Scan.h5`. A file is one DAQ session, not one calendar day:
-`W47_20261117_RIXS.h5` holds `acq0` to `acq45`, and `acq39` onwards started on
-18 November. On 18 November only one RIXS file existed, so it is not yet known
-whether acq numbering restarts with a new file.
+`W47_20261117_RIXS.h5` holds `acq0` to `acq103` (17 to 20 November). Numbering
+does not restart with a new file: `W47_20261120_RIXS.h5` starts at `acq104`. All
+scans so far are in `W47_20261117_Scan.h5`.
 
 The "X-ray energy (eV) Veritasrm_energy" column is the spectrometer arm
 energy. For `acq38` the sheet says 525 and the file's `veritasarm_energy`

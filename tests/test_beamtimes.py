@@ -43,7 +43,7 @@ def test_acq_entries_are_complete():
         for e in entries:
             if "first_row" in e:
                 continue
-            assert {"file", "day", "first_acq", "arm_energy"} <= set(e), (key, e)
+            assert {"file", "first_acq", "arm_energy"} <= set(e), (key, e)
             assert e.get("last_acq", e["first_acq"]) >= e["first_acq"], (key, e)
 
 

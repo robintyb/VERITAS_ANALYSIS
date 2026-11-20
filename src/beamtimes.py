@@ -1,7 +1,7 @@
 """Beamtimes whose runs are rows of a run table (d22, m23, f24, m24).
 
 Adding such a beamtime is one Beamtime entry below plus its energy scales in
-energy_scales/index.toml. Beamtimes read by (day, acq) live in `daq` instead.
+energy_scales/index.toml. Beamtimes read by acquisition number live in `daq` instead.
 """
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ def get(key: str) -> Beamtime:
         return BEAMTIMES[key]
     except KeyError:
         raise ValueError(f"unknown beamtime {key!r}; known: {tuple(BEAMTIMES)}. "
-                         "For n26 and later use daq.load_acq(day, acq).") from None
+                         "For n26 and later use daq.load_acq(acq).") from None
 
 
 @cache

@@ -49,7 +49,7 @@ If something behaves oddly, restart the kernel.
   conflicts because two people added rows, keep both.
 - **`energy_scales/`**: an energy scale is valid only for the arm energy
   it was measured at, so a new elastic sweep usually means a new scale.
-  Make it with `calibration.calibrate_elastic_sweep(day, acq)`, check the
+  Make it with `calibration.calibrate_elastic_sweep(acq)`, check the
   fit report, and save it with `calibration.save_energy_scale(...)`, which
   adds a new file and its `energy_scales/index.toml` entry. Never overwrite
   an existing `.npy`: older ones must stay unchanged so old results can be

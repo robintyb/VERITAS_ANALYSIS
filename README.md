@@ -130,7 +130,7 @@ Each file in `src/` is a module you import by name:
 
 | Module | What it is for |
 |---|---|
-| `daq` | n26 and later: load acquisitions by `(day, acq)`, scans, and the run log |
+| `daq` | n26 and later: load acquisitions by number, scans, and the run log |
 | `spectrum` | `Spectrum`, an immutable (energy, intensity, meta) value, and `combine` / `average` |
 | `droplet_temperature` | `DropletCooling`: Knudsen-model temperature of an evaporatively cooled microdroplet vs. travel distance |
 | `calibration` | Energy scales: fit an elastic sweep, save a scale, look one up |
@@ -141,22 +141,23 @@ Each file in `src/` is a module you import by name:
 
 ### n26 data
 
-Acquisitions are addressed by the `YYYYMMDD` in the raw file name (`day`)
-and the acquisition number. One file is one DAQ session, so a file can run
-past midnight.
+Acquisitions are addressed by their number alone. The DAQ starts a new raw
+file (`W47_<YYYYMMDD>_RIXS.h5`) now and then, but acq numbers keep counting
+across files, and `daq` finds the file that holds each acquisition or scan.
+`meta["day"]` says which file it came from.
 
 ```python
 import daq
 import spectrum as sp
 
-daq.list_acqs("20261117")                      # one row per acq: energies, times, sample, comments
-s = daq.load_acq("20261117", 38, calibrated=True)   # DAQ's dark-corrected spectrum, in eV
+daq.list_acqs()                                # one row per acq: energies, times, sample, comments
+s = daq.load_acq(38, calibrated=True)          # DAQ's dark-corrected spectrum, in eV
 s = s.smooth_gauss(0.05).normalised()          # every operation returns a new Spectrum
 s.plot()
 
-runs = [daq.load_acq("20261117", a, calibrated=True) for a in (38, 40)]
+runs = [daq.load_acq(a, calibrated=True) for a in (38, 40)]
 total = sp.combine(runs)                       # sums counts; normalise afterwards
-xas = daq.load_scan("20261117", 10519)         # aemslit_ch1 against the scanned motor
+xas = daq.load_scan(10519)                     # aemslit_ch1 against the scanned motor
 ```
 
 - `calibrated=True` uses the energy scale `energy_scales/index.toml` assigns
@@ -200,9 +201,9 @@ After an elastic sweep (beamline energy stepped during one acquisition):
 
 ```python
 import calibration
-scale, report = calibration.calibrate_elastic_sweep("20261117", 43, order=2)
+scale, report = calibration.calibrate_elastic_sweep(43, order=2)
 report            # one row per energy step: fitted channel, uncertainty, residual
-calibration.save_energy_scale(scale, "n26", "20261117", first_acq=43,
+calibration.save_energy_scale(scale, "n26", first_acq=43,
                               arm_energy=report.attrs["arm_energy"],
                               reference="elastic sweep acq43")
 ```
