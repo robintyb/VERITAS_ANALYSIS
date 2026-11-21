@@ -120,15 +120,18 @@ def _log(group, name) -> np.ndarray:
         return np.empty((0, 2))
 
 
+def _manipulator_axes(group) -> list[str]:
+    return sorted(name for name in group["startmetadata"] if name.startswith(MANIPULATOR))
+
+
 def _manipulator(group) -> dict:
     """{a_mp1_<axis>: position} for every sample-manipulator axis: the mean of the
     acquisition's External log (sampled about once a second while it counts), or the
     startmetadata value where there is no readable log (a_mp1_tilt, running acquisitions)."""
-    start = group["startmetadata"]
     positions = {}
-    for axis in sorted(name for name in start if name.startswith(MANIPULATOR)):
+    for axis in _manipulator_axes(group):
         log = _log(group, f"{axis}/position")
-        positions[axis] = float(log[:, 1].mean()) if len(log) else _position(start, axis)
+        positions[axis] = float(log[:, 1].mean()) if len(log) else _position(group["startmetadata"], axis)
     return positions
 
 
@@ -148,7 +151,7 @@ def manipulator_log(acqs=None, *, beamtime: str = "n26") -> pd.DataFrame:
         with open_h5(acq_file(acq, beamtime)) as f:
             group = f[f"acq{acq}"]
             axes = {}
-            for axis in sorted(n for n in group["startmetadata"] if n.startswith(MANIPULATOR)):
+            for axis in _manipulator_axes(group):
                 log = _log(group, f"{axis}/position")
                 if len(log):
                     axes[axis] = pd.Series(log[:, 1], index=pd.to_datetime(log[:, 0], unit="s", utc=True).tz_convert(TIMEZONE).tz_localize(None))

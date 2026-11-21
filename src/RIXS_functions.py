@@ -129,8 +129,6 @@ class RIXS_run:
         self.binsize=1
         self.index=index
         self.excitation_energy=np.nan
-        self.arm_energy=np.nan
-        self.beamline_energy=np.nan
         with h5py.File(filename, 'r', locking=False) as file:
             metadata = file[run_number].get('startmetadata', {})
             self.arm_energy = _position(metadata, 'veritasarm_energy')
@@ -147,7 +145,6 @@ class RIXS_run:
         points = file1.loadPoints()
 
         calibration = file1.loadCalibration()
-        # Open the same calibration again, but this time we will change it a bit
         calibration2 = file1.loadCalibration()
         calibration2.set_time_windows(_dark_time_window(self.filename, self.run_number, calibration))
 
@@ -159,7 +156,6 @@ class RIXS_run:
         escale = calibration.energy_scale
 
         spec = data.create_spectrum(corrected_points)
-        # Lets do a little rebinning as well
         escale = escale.reshape((escale.shape[0]//self.binsize, self.binsize)).mean(axis=1)
         spec = spec.reshape((spec.shape[0]//self.binsize, self.binsize)).sum(axis=1)        
 
