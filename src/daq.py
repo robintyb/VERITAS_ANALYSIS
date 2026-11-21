@@ -222,18 +222,22 @@ def _calibration(group) -> DLDCalibration:
     return cal
 
 
+def _channel_counts(cal, points) -> np.ndarray:
+    return np.bincount(cal.corrected_points(points)[:, 0].astype(int), minlength=cal.x_size)[:cal.x_size].astype(float)
+
+
+def light_histogram(group):
+    """A function points -> channel histogram of the events in the light time window, with no dark correction."""
+    light = _calibration(group)
+    return lambda points: _channel_counts(light, points)
+
+
 def dark_corrected_histogram(group):
     """A function points -> light - dark channel histogram, computed as the DAQ computes calib_x_spectrum."""
     light = _calibration(group)
     dark = copy.deepcopy(light)
     dark.set_time_windows(group["Instrument/DLD8080/calibration/dark_time_window"][()])
-    n = light.x_size
-
-    def histogram(points):
-        def counts(cal):
-            return np.bincount(cal.corrected_points(points)[:, 0].astype(int), minlength=n)[:n]
-        return (counts(light) - counts(dark)).astype(float)
-    return histogram
+    return lambda points: _channel_counts(light, points) - _channel_counts(dark, points)
 
 
 def acq_info(acq: int, *, beamtime: str = "n26") -> dict:
@@ -242,8 +246,15 @@ def acq_info(acq: int, *, beamtime: str = "n26") -> dict:
         return acq_meta(f[f"acq{acq}"])
 
 
-def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False) -> Spectrum:
-    """The DAQ's dark-corrected spectrum of one acquisition.
+def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False,
+             dark_correct: bool = False) -> Spectrum:
+    """The spectrum of one acquisition: the events in the DAQ's light time window.
+
+    With dark_correct=True it is the DAQ's own light - dark spectrum
+    (data/calib_x_spectrum) instead, which removes the background counted in the dark
+    window but adds that window's Poisson noise; for faint signals the default is
+    better. Without it the histogram is rebuilt from the recorded points, so a long
+    acquisition takes longer to load. meta["dark_corrected"] says which one you have.
 
     On the axis the DAQ stored in data/energy_scale: detector channels, or eV once
     the DAQ has been given a calibration (energy_scale_lines; n26 from acq44 on).
@@ -266,11 +277,13 @@ def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False) -> Sp
                 "energy_scale": "channels" if np.array_equal(energy, np.arange(energy.size)) else "daq",
                 **acq_metadata(group)}
         meta["running"] = meta["end_time"] is None
-        if meta["running"]:
+        meta["dark_corrected"] = dark_correct
+        if meta["running"] or not dark_correct:
             points = group["Instrument/DLD8080/data/points"][()]
-            intensity = dark_corrected_histogram(group)(points)
-            warnings.warn(f"acq{acq} is still running; spectrum rebuilt from the {len(points)} "
-                          "points recorded so far", stacklevel=2)
+            intensity = (dark_corrected_histogram if dark_correct else light_histogram)(group)(points)
+            if meta["running"]:
+                warnings.warn(f"acq{acq} is still running; spectrum rebuilt from the {len(points)} "
+                              "points recorded so far", stacklevel=2)
         else:
             intensity = group["data/calib_x_spectrum"][()]
     meta["counts"] = float(intensity.sum())

@@ -83,3 +83,41 @@ def test_acq_file_skips_a_file_the_daq_is_writing(raw_files):
 def test_manipulator_log_rejects_an_old_style_day(raw_files):
     with pytest.raises(TypeError, match="no longer takes a day"):
         daq.manipulator_log("20261117")
+
+
+class _StubCalibration:
+    """Keeps the points whose time (column 1) is inside the window; column 0 is the channel."""
+    x_size = 4
+    window = (0, 9)
+
+    def set_time_windows(self, window):
+        self.window = tuple(window)
+
+    def corrected_points(self, points):
+        return points[(points[:, 1] >= self.window[0]) & (points[:, 1] <= self.window[1])]
+
+
+@pytest.fixture
+def acq_with_points(tmp_path, monkeypatch):
+    """acq3 with 5 light events (channels 0,1,1,2,3) and 2 dark events (channels 1,2)."""
+    path = tmp_path / "W47_20261117_RIXS.h5"
+    _acq_group(path).file.close()
+    points = np.array([[0, 1], [1, 2], [1, 3], [2, 4], [3, 5], [1, 20], [2, 21]], dtype=float)
+    with h5py.File(path, "a") as f:
+        g = f["acq3"]
+        g["data/energy_scale"] = np.arange(4)
+        g["data/calib_x_spectrum"] = [1.0, 1.0, 0.0, 1.0]
+        g["Instrument/DLD8080/data/points"] = points
+        g["Instrument/DLD8080/calibration/dark_time_window"] = [20, 29]
+    monkeypatch.setattr(daq, "raw_data_dir", lambda beamtime: tmp_path)
+    monkeypatch.setattr(daq, "_calibration", lambda group: _StubCalibration())
+
+
+def test_load_acq_counts_the_light_window_unless_dark_correct_is_asked_for(acq_with_points):
+    plain = daq.load_acq(3)
+    np.testing.assert_array_equal(plain.intensity, [1, 2, 1, 1])
+    assert plain.meta["counts"] == 5 and not plain.meta["dark_corrected"]
+
+    corrected = daq.load_acq(3, dark_correct=True)
+    np.testing.assert_array_equal(corrected.intensity, [1, 1, 0, 1])
+    assert corrected.meta["counts"] == 3 and corrected.meta["dark_corrected"]

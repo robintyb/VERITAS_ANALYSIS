@@ -151,7 +151,7 @@ import daq
 import spectrum as sp
 
 daq.list_acqs()                                # one row per acq: energies, times, sample, comments
-s = daq.load_acq(38, calibrated=True)          # DAQ's dark-corrected spectrum, in eV
+s = daq.load_acq(38, calibrated=True)          # light-window counts (not dark-corrected), in eV
 s = s.smooth_gauss(0.05).normalised()          # every operation returns a new Spectrum
 s.plot()
 
@@ -167,6 +167,9 @@ xas = daq.load_scan(10519)                     # aemslit_ch1 against the scanned
 - A scale is only valid for the arm energy it was measured at. Loading an
   acquisition taken at another arm energy, or one where the arm moved during
   the acquisition, gives a warning.
+- `dark_correct=True` returns the DAQ's own light − dark spectrum instead. It
+  removes the dark-window background but adds that window's Poisson noise, so
+  it is off by default; `s.meta["dark_corrected"]` says which one you have.
 - An acquisition that is still running is rebuilt from the events recorded
   so far, with a warning.
 - To merge acquisitions use `sp.combine`, which sums counts, so a 2 h run
