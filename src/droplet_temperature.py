@@ -51,7 +51,7 @@ def _murphy_koop(T, m):
 
 def p_vap_water(T):
     """Saturation vapour pressure of supercooled liquid water in Pa (Murphy & Koop 2005)."""
-    if _is_scalar(T):                      # plain floats: math is several times faster than numpy
+    if _is_scalar(T):                      # math is several times faster than numpy on plain floats
         return _murphy_koop(float(T), math)
     return _murphy_koop(np.asarray(T, dtype=float), np)
 

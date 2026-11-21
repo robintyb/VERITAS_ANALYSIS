@@ -113,22 +113,25 @@ TIMEZONE = "Europe/Stockholm"  # the DAQ's start_time/end_time are local; its lo
 
 def _log(group, name) -> np.ndarray:
     """(unix time, value) rows of External/<name>; empty if there is no log or it can't
-    be read yet (a running acquisition: the DAQ has written past our view of the file)."""
+    be read yet, as in a running acquisition, where the DAQ has written past our view of the file."""
     try:
         return group[f"External/{name}"][()]
     except (KeyError, OSError):
         return np.empty((0, 2))
 
 
+def _manipulator_axes(group) -> list[str]:
+    return sorted(name for name in group["startmetadata"] if name.startswith(MANIPULATOR))
+
+
 def _manipulator(group) -> dict:
-    """{a_mp1_<axis>: position} for every sample-manipulator axis: the mean of the
-    acquisition's External log (sampled about once a second while it counts), or the
+    """{a_mp1_<axis>: position} for every sample-manipulator axis. The position is the mean
+    of the acquisition's External log (sampled about once a second while it counts), or the
     startmetadata value where there is no readable log (a_mp1_tilt, running acquisitions)."""
-    start = group["startmetadata"]
     positions = {}
-    for axis in sorted(name for name in start if name.startswith(MANIPULATOR)):
+    for axis in _manipulator_axes(group):
         log = _log(group, f"{axis}/position")
-        positions[axis] = float(log[:, 1].mean()) if len(log) else _position(start, axis)
+        positions[axis] = float(log[:, 1].mean()) if len(log) else _position(group["startmetadata"], axis)
     return positions
 
 
@@ -138,8 +141,8 @@ def manipulator_log(acqs=None, *, beamtime: str = "n26") -> pd.DataFrame:
     Columns: time (datetime64, local like start_time), acq, and one column per a_mp1_<axis> that has an
     External log (azim, x, y, yaw, z), in the DAQ's units. The log is sampled about once a
     second while an acquisition counts, so there are gaps between acquisitions.
-    `acqs` selects acquisitions (default all, in every RIXS file); one whose log is not
-    readable is skipped.
+    `acqs` selects acquisitions (default all, in every RIXS file). An acquisition whose
+    log is not readable gives no rows.
     """
     if isinstance(acqs, str):
         raise TypeError(f"acqs must be acquisition numbers, not {acqs!r}; manipulator_log no longer takes a day")
@@ -148,7 +151,7 @@ def manipulator_log(acqs=None, *, beamtime: str = "n26") -> pd.DataFrame:
         with open_h5(acq_file(acq, beamtime)) as f:
             group = f[f"acq{acq}"]
             axes = {}
-            for axis in sorted(n for n in group["startmetadata"] if n.startswith(MANIPULATOR)):
+            for axis in _manipulator_axes(group):
                 log = _log(group, f"{axis}/position")
                 if len(log):
                     axes[axis] = pd.Series(log[:, 1], index=pd.to_datetime(log[:, 0], unit="s", utc=True).tz_convert(TIMEZONE).tz_localize(None))
@@ -159,7 +162,7 @@ def manipulator_log(acqs=None, *, beamtime: str = "n26") -> pd.DataFrame:
 
 def acq_meta(group) -> dict:
     """Start/end metadata. The start values are saved before the acquisition and can
-    be stale (n26 acq35: the arm reached 528 eV just before counting, start says 523),
+    be stale (in n26 acq35 the arm reached 528 eV just before counting, but start says 523),
     so arm_energy_end is kept too; it is nan while an acquisition is running.
     The a_mp1_<axis> manipulator positions are averages over the acquisition."""
     start, end = group["startmetadata"], group.get("endmetadata", {})
@@ -222,18 +225,22 @@ def _calibration(group) -> DLDCalibration:
     return cal
 
 
+def _channel_counts(cal, points) -> np.ndarray:
+    return np.bincount(cal.corrected_points(points)[:, 0].astype(int), minlength=cal.x_size)[:cal.x_size].astype(float)
+
+
+def light_histogram(group):
+    """A function points -> channel histogram of the events in the light time window, with no dark correction."""
+    light = _calibration(group)
+    return lambda points: _channel_counts(light, points)
+
+
 def dark_corrected_histogram(group):
     """A function points -> light - dark channel histogram, computed as the DAQ computes calib_x_spectrum."""
     light = _calibration(group)
     dark = copy.deepcopy(light)
     dark.set_time_windows(group["Instrument/DLD8080/calibration/dark_time_window"][()])
-    n = light.x_size
-
-    def histogram(points):
-        def counts(cal):
-            return np.bincount(cal.corrected_points(points)[:, 0].astype(int), minlength=n)[:n]
-        return (counts(light) - counts(dark)).astype(float)
-    return histogram
+    return lambda points: _channel_counts(light, points) - _channel_counts(dark, points)
 
 
 def acq_info(acq: int, *, beamtime: str = "n26") -> dict:
@@ -242,11 +249,18 @@ def acq_info(acq: int, *, beamtime: str = "n26") -> dict:
         return acq_meta(f[f"acq{acq}"])
 
 
-def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False) -> Spectrum:
-    """The DAQ's dark-corrected spectrum of one acquisition.
+def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False,
+             dark_correct: bool = False) -> Spectrum:
+    """The spectrum of one acquisition, from the events in the DAQ's light time window.
 
-    On the axis the DAQ stored in data/energy_scale: detector channels, or eV once
-    the DAQ has been given a calibration (energy_scale_lines; n26 from acq44 on).
+    With dark_correct=True it is the DAQ's own light - dark spectrum
+    (data/calib_x_spectrum) instead, which removes the background counted in the dark
+    window but adds that window's Poisson noise; for faint signals the default is
+    better. Without it the histogram is rebuilt from the recorded points, so a long
+    acquisition takes longer to load. meta["dark_corrected"] says which one you have.
+
+    The axis is the one the DAQ stored in data/energy_scale, which is detector channels,
+    or eV once the DAQ has been given a calibration (energy_scale_lines; n26 from acq44 on).
     meta["energy_scale"] says which ("channels" or "daq"). With calibrated=True the
     axis is replaced by the scale energy_scales/index.toml assigns to this
     acquisition (meta["energy_scale"] names that file); with no such entry, the
@@ -255,7 +269,7 @@ def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False) -> Sp
     rebuilt from the points recorded so far (meta["running"] is True).
 
     Besides the acq_meta summary (including the mean a_mp1_<axis> manipulator
-    positions), meta holds all saved metadata: see acq_metadata.
+    positions), meta holds all saved metadata, as acq_metadata describes.
     """
     path = acq_file(acq, beamtime)
     with open_h5(path) as f:
@@ -266,11 +280,13 @@ def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False) -> Sp
                 "energy_scale": "channels" if np.array_equal(energy, np.arange(energy.size)) else "daq",
                 **acq_metadata(group)}
         meta["running"] = meta["end_time"] is None
-        if meta["running"]:
+        meta["dark_corrected"] = dark_correct
+        if meta["running"] or not dark_correct:
             points = group["Instrument/DLD8080/data/points"][()]
-            intensity = dark_corrected_histogram(group)(points)
-            warnings.warn(f"acq{acq} is still running; spectrum rebuilt from the {len(points)} "
-                          "points recorded so far", stacklevel=2)
+            intensity = (dark_corrected_histogram if dark_correct else light_histogram)(group)(points)
+            if meta["running"]:
+                warnings.warn(f"acq{acq} is still running; spectrum rebuilt from the {len(points)} "
+                              "points recorded so far", stacklevel=2)
         else:
             intensity = group["data/calib_x_spectrum"][()]
     meta["counts"] = float(intensity.sum())

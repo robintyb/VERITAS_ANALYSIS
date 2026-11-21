@@ -19,18 +19,17 @@ def gauss(x,position,amp,width):
 voigt = lambda x,x0,amp,width,gamma:np.nan_to_num(amp*voigt_profile(x-x0,width/2.355,gamma))
 
 
-def pseudo_voigt(x, center, amplitude, fwhm_g, gamma): #heightnorm
-    """
-    Pseudo-Voigt using peak-height-normalized Gaussian and Lorentzian.
-    amplitude -> peak height (value at center)
-    fwhm_g, fwhm_l -> FWHMs of Gaussian and Lorentzian components.
+def pseudo_voigt(x, center, amplitude, fwhm_g, gamma):
+    """Pseudo-Voigt from a height-normalised Gaussian and Lorentzian.
+
+    amplitude is the peak height at center, fwhm_g the Gaussian FWHM and gamma the
+    Lorentzian HWHM.
     """
     fwhm_l=2*gamma
     # combined FWHM (Thompson-Cox-Hastings style)
     f = (fwhm_g**5 + 2.69269*fwhm_g**4*fwhm_l + 2.42843*fwhm_g**3*fwhm_l**2 +
          4.47163*fwhm_g**2*fwhm_l**3 + 0.07842*fwhm_g*fwhm_l**4 + fwhm_l**5)**(1/5)
 
-    # mixing parameter (r = fwhm_l / f)
     r = fwhm_l / f
     eta = 1.36603*r - 0.47719*r**2 + 0.11116*r**3
     eta = np.clip(eta, 0.0, 1.0)
@@ -41,7 +40,6 @@ def pseudo_voigt(x, center, amplitude, fwhm_g, gamma): #heightnorm
     # height-normalized Lorentzian: L(0)=1, FWHM = fwhm_l
     lorentz = 1.0 / (1.0 + 4.0 * ((x - center)**2) / (fwhm_l**2))
 
-    # weighted sum -> amplitude is peak height at center
     return amplitude * (eta * lorentz + (1.0 - eta) * gauss)
 
 
@@ -64,7 +62,7 @@ def _peak(params, x, i, profile):
 
 
 def peak_sum(params, x, number, profile="gauss"):
-    """The model: the sum of `number` peaks."""
+    """The model, the sum of `number` peaks."""
     total = np.zeros(len(x))
     for i in range(number):
         total += _peak(params, x, i, profile)

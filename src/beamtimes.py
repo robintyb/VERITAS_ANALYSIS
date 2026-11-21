@@ -74,7 +74,7 @@ def dld_file(key: str, row: int) -> Path:
 
 
 def read_index() -> dict[str, list[dict]]:
-    """energy_scales/index.toml: beamtime key -> list of entries, in file order."""
+    """energy_scales/index.toml as {beamtime key: list of entries}, in file order."""
     with open(ENERGY_SCALES / "index.toml", "rb") as f:
         return tomllib.load(f)
 
