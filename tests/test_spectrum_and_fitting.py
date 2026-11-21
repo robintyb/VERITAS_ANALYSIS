@@ -44,6 +44,18 @@ def test_normalised_has_unit_area():
     assert np.trapezoid(s.intensity, s.energy) == pytest.approx(1)
 
 
+def test_normalised_energy_range_gives_unit_area_in_the_window_and_keeps_the_rest():
+    s = peak()
+    n = s.normalised((190, 210))
+    window = n.cropped(190, 210)
+    assert np.trapezoid(window.intensity, window.energy) == pytest.approx(1)
+    assert len(n) == len(s)
+    assert n.normalised((190, None)).intensity == pytest.approx(n.normalised((190, 1e9)).intensity)
+    for bad in [(210, 190), (1000, 2000), (5, 5)]:
+        with pytest.raises(ValueError):
+            s.normalised(bad)
+
+
 def test_combine_sums_counts_and_time():
     short, long = peak(counts=10, seconds=5), peak(counts=10_000, seconds=7200)
     total = combine([short, long])

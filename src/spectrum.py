@@ -72,9 +72,16 @@ class Spectrum:
         f[np.abs(np.fft.fftfreq(self.intensity.size)) > frequency] = 0
         return self._with(np.fft.ifft(f).real)
 
-    def normalised(self) -> Spectrum:
-        """Divide by the area under the curve."""
-        return self._with(self.intensity / np.trapezoid(self.intensity, x=self.energy))
+    def normalised(self, energy_range=None) -> Spectrum:
+        """Divide by the area under the curve, or only between energy_range = (lo, hi).
+
+        The whole spectrum is kept; only the area used for normalising is windowed.
+        Either end may be None for a window open on that side.
+        """
+        keep = np.ones(len(self), bool) if energy_range is None else _window(self, *energy_range)
+        if keep.sum() < 2:
+            raise ValueError(f"fewer than two points in energy_range {energy_range}")
+        return self._with(self.intensity / np.trapezoid(self.intensity[keep], x=self.energy[keep]))
 
     def shifted(self, dE: float) -> Spectrum:
         return self._with(energy=self.energy + dE)
