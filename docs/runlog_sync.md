@@ -29,8 +29,8 @@ the output through `veritas_paths.runlog_csv('n26')`; `daq.run_log('n26')`
 loads it and `daq.list_acqs()` joins it to the acquisitions in the raw files. A notebook can refresh
 before loading with `!python ../../tools/fetch_runlog.py n26`.
 
-To keep the CSV current without thinking about it, run a loop in a terminal
-or `tmux` for the length of the beamtime:
+To refresh the CSV every minute, run a loop in a terminal or `tmux` for the
+length of the beamtime:
 
 ```bash
 while true; do python tools/fetch_runlog.py n26; sleep 60; done
@@ -43,10 +43,10 @@ The sheet has two tabs. "Run table" (`gid=0`) is the run log. "Shift Plan"
 
 Rows are identified by `Run name` only. There is no date or file column.
 `acqN` names a group in `W47_<YYYYMMDD>_RIXS.h5` and `entryN` names a scan in
-`W47_<YYYYMMDD>_Scan.h5`. A file is one DAQ session, not one calendar day:
+`W47_<YYYYMMDD>_Scan.h5`. A file is one DAQ session, not one calendar day.
 `W47_20261117_RIXS.h5` holds `acq0` to `acq103` (17 to 20 November). Numbering
-does not restart with a new file: `W47_20261120_RIXS.h5` starts at `acq104`. All
-scans so far are in `W47_20261117_Scan.h5`.
+does not restart with a new file, so `W47_20261120_RIXS.h5` starts at `acq104`.
+All scans so far are in `W47_20261117_Scan.h5`.
 
 The "X-ray energy (eV) Veritasrm_energy" column is the spectrometer arm
 energy. For `acq38` the sheet says 525 and the file's `veritasarm_energy`
@@ -79,8 +79,8 @@ That gives the right file whether or not numbering restarts. A run logged
 before the DAQ has written it gets an empty `day`, and the next fetch fills it
 in.
 
-The CSV is rewritten only when its content changes, via a temp file and
-`os.replace`. A reader never sees a half-written file, and the file's mtime
+The script rewrites the CSV only when its content changes, through a temp
+file and `os.replace`. A reader never sees a half-written file, and the file's mtime
 changes only on real edits, so a loader that re-reads on mtime does no extra
 work. If the download fails or a raw file cannot be read, the script exits 1
 and keeps the previous CSV.
@@ -115,10 +115,10 @@ MAX IV offline cluster accepts no inbound connections from the internet
 hosted elsewhere. A Drive notification also carries no content, so the
 receiver would still fetch the CSV.
 
-## A listener service: no
+## Why there is no listener service
 
 A push listener cannot receive anything on the cluster, and a relay outside
-MAX IV is far more machinery than a 1 KB download. A polling service under
-cron or systemd is also not worth it. The script is idempotent and cheap, so
-running it on demand, or the shell loop above during shifts, gives the same
-freshness with nothing to install, monitor, or clean up after the beamtime.
+MAX IV is far more to set up and run than a 1 KB download. A polling service
+under cron or systemd is also not worth it. The script is idempotent and cheap,
+so running it on demand, or the shell loop above during shifts, keeps the CSV
+just as current with nothing to install, monitor, or clean up after the beamtime.

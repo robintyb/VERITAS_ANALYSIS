@@ -52,8 +52,8 @@ If something behaves oddly, restart the kernel.
   Make it with `calibration.calibrate_elastic_sweep(acq)`, check the
   fit report, and save it with `calibration.save_energy_scale(...)`, which
   adds a new file and its `energy_scales/index.toml` entry. Never overwrite
-  an existing `.npy`: older ones must stay unchanged so old results can be
-  reproduced. Tell everyone when you add one.
+  an existing `.npy`. Old results can only be reproduced while the scales
+  they used stay unchanged. Tell everyone when you add one.
 - **Where code goes in `src/`**: a new processing step is a `Spectrum`
   method or a function that takes a `Spectrum`; a new line shape is a
   `PROFILES` entry in `fitting_functions.py`; a new beamtime is data

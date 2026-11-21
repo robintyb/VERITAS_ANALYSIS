@@ -236,7 +236,7 @@ def filter_samples(excitation_energy,**kwargs):
 
 
 def load_from_index(index,**kwargs):
-    """ choose d22, m23, f24 or m24 as runinfo,"""
+    """runinfo is one of d22, m23, f24 or m24."""
     beamtime = kwargs.get('runinfo')
     if beamtime not in BEAMTIMES:
         raise ValueError(f'specify runinfo as one of {BEAMTIMES}')

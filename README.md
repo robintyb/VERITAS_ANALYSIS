@@ -11,7 +11,7 @@
 | `tools/` | Scripts: `fetch_runlog.py` (n26 run log, see [docs/runlog_sync.md](docs/runlog_sync.md)), `check_run_mapping.py` |
 | `tests/` | Checks that need no raw data: `uv run pytest` |
 
-Raw data (`.h5`) is **not** stored in the repository.
+The repository holds no raw data (`.h5`).
 
 ## One-time setup
 
@@ -19,7 +19,7 @@ Raw data (`.h5`) is **not** stored in the repository.
 git clone https://github.com/robintyb/VERITAS_ANALYSIS.git
 cd VERITAS_ANALYSIS
 python -m venv .venv && source .venv/bin/activate   # or a conda env
-pip install -e ".[dev]"          # installs src/ in editable mode + tools
+pip install -e ".[dev]"          # installs src/ in editable mode and the dev tools
 pre-commit install               # strips notebook outputs on every commit
 cp config.example.toml config.local.toml   # then edit your raw-data paths
 ```
@@ -32,7 +32,7 @@ cp config.example.toml config.local.toml   # then edit your raw-data paths
 If you use [uv](https://docs.astral.sh/uv/), skip the venv and pip lines:
 
 ```bash
-uv sync --extra dev              # creates .venv, installs uv.lock versions, src/ + rixsaqlib editable
+uv sync --extra dev              # creates .venv from uv.lock, with src/ and rixsaqlib editable
 uv run pre-commit install
 cp config.example.toml config.local.toml
 ```
@@ -41,8 +41,8 @@ cp config.example.toml config.local.toml
 removes the dev tools.
 
 `fast` is an optional extra (numba). It compiles the `droplet_temperature` simulation loop,
-which takes a default run from about 11 s to under a second with identical results:
-`uv sync --extra dev --extra fast`. Without it everything still works, in numpy. Any `uv sync` that
+which takes a default run from about 11 s to under a second with identical results.
+Install it with `uv sync --extra dev --extra fast`. Without it everything still works, in numpy. Any `uv sync` that
 leaves `--extra fast` out removes numba again, so repeat it each time.
 
 Run `uv sync` in a terminal on the machine where your Jupyter kernel runs

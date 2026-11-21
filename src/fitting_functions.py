@@ -20,10 +20,10 @@ voigt = lambda x,x0,amp,width,gamma:np.nan_to_num(amp*voigt_profile(x-x0,width/2
 
 
 def pseudo_voigt(x, center, amplitude, fwhm_g, gamma):
-    """
-    Pseudo-Voigt using peak-height-normalized Gaussian and Lorentzian.
-    amplitude -> peak height (value at center)
-    fwhm_g -> FWHM of the Gaussian; gamma -> HWHM of the Lorentzian.
+    """Pseudo-Voigt from a height-normalised Gaussian and Lorentzian.
+
+    amplitude is the peak height at center, fwhm_g the Gaussian FWHM and gamma the
+    Lorentzian HWHM.
     """
     fwhm_l=2*gamma
     # combined FWHM (Thompson-Cox-Hastings style)
@@ -62,7 +62,7 @@ def _peak(params, x, i, profile):
 
 
 def peak_sum(params, x, number, profile="gauss"):
-    """The model: the sum of `number` peaks."""
+    """The model, the sum of `number` peaks."""
     total = np.zeros(len(x))
     for i in range(number):
         total += _peak(params, x, i, profile)

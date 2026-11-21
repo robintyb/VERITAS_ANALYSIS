@@ -113,7 +113,7 @@ TIMEZONE = "Europe/Stockholm"  # the DAQ's start_time/end_time are local; its lo
 
 def _log(group, name) -> np.ndarray:
     """(unix time, value) rows of External/<name>; empty if there is no log or it can't
-    be read yet (a running acquisition: the DAQ has written past our view of the file)."""
+    be read yet, as in a running acquisition, where the DAQ has written past our view of the file."""
     try:
         return group[f"External/{name}"][()]
     except (KeyError, OSError):
@@ -125,8 +125,8 @@ def _manipulator_axes(group) -> list[str]:
 
 
 def _manipulator(group) -> dict:
-    """{a_mp1_<axis>: position} for every sample-manipulator axis: the mean of the
-    acquisition's External log (sampled about once a second while it counts), or the
+    """{a_mp1_<axis>: position} for every sample-manipulator axis. The position is the mean
+    of the acquisition's External log (sampled about once a second while it counts), or the
     startmetadata value where there is no readable log (a_mp1_tilt, running acquisitions)."""
     positions = {}
     for axis in _manipulator_axes(group):
@@ -141,8 +141,8 @@ def manipulator_log(acqs=None, *, beamtime: str = "n26") -> pd.DataFrame:
     Columns: time (datetime64, local like start_time), acq, and one column per a_mp1_<axis> that has an
     External log (azim, x, y, yaw, z), in the DAQ's units. The log is sampled about once a
     second while an acquisition counts, so there are gaps between acquisitions.
-    `acqs` selects acquisitions (default all, in every RIXS file); one whose log is not
-    readable is skipped.
+    `acqs` selects acquisitions (default all, in every RIXS file). An acquisition whose
+    log is not readable gives no rows.
     """
     if isinstance(acqs, str):
         raise TypeError(f"acqs must be acquisition numbers, not {acqs!r}; manipulator_log no longer takes a day")
@@ -162,7 +162,7 @@ def manipulator_log(acqs=None, *, beamtime: str = "n26") -> pd.DataFrame:
 
 def acq_meta(group) -> dict:
     """Start/end metadata. The start values are saved before the acquisition and can
-    be stale (n26 acq35: the arm reached 528 eV just before counting, start says 523),
+    be stale (in n26 acq35 the arm reached 528 eV just before counting, but start says 523),
     so arm_energy_end is kept too; it is nan while an acquisition is running.
     The a_mp1_<axis> manipulator positions are averages over the acquisition."""
     start, end = group["startmetadata"], group.get("endmetadata", {})
@@ -251,7 +251,7 @@ def acq_info(acq: int, *, beamtime: str = "n26") -> dict:
 
 def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False,
              dark_correct: bool = False) -> Spectrum:
-    """The spectrum of one acquisition: the events in the DAQ's light time window.
+    """The spectrum of one acquisition, from the events in the DAQ's light time window.
 
     With dark_correct=True it is the DAQ's own light - dark spectrum
     (data/calib_x_spectrum) instead, which removes the background counted in the dark
@@ -259,8 +259,8 @@ def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False,
     better. Without it the histogram is rebuilt from the recorded points, so a long
     acquisition takes longer to load. meta["dark_corrected"] says which one you have.
 
-    On the axis the DAQ stored in data/energy_scale: detector channels, or eV once
-    the DAQ has been given a calibration (energy_scale_lines; n26 from acq44 on).
+    The axis is the one the DAQ stored in data/energy_scale, which is detector channels,
+    or eV once the DAQ has been given a calibration (energy_scale_lines; n26 from acq44 on).
     meta["energy_scale"] says which ("channels" or "daq"). With calibrated=True the
     axis is replaced by the scale energy_scales/index.toml assigns to this
     acquisition (meta["energy_scale"] names that file); with no such entry, the
@@ -269,7 +269,7 @@ def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False,
     rebuilt from the points recorded so far (meta["running"] is True).
 
     Besides the acq_meta summary (including the mean a_mp1_<axis> manipulator
-    positions), meta holds all saved metadata: see acq_metadata.
+    positions), meta holds all saved metadata, as acq_metadata describes.
     """
     path = acq_file(acq, beamtime)
     with open_h5(path) as f:
