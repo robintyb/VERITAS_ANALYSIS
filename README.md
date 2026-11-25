@@ -18,14 +18,53 @@ The repository holds no raw data (`.h5`).
 ```bash
 git clone https://github.com/robintyb/VERITAS_ANALYSIS.git
 cd VERITAS_ANALYSIS
-python -m venv .venv && source .venv/bin/activate   # or a conda env
-pip install -e ".[dev]"          # installs src/ in editable mode and the dev tools
+python3 --version                # needs 3.11 or newer, see below
+python3 -m venv .venv            # or a conda env with Python 3.11+
+source .venv/bin/activate
+python -m pip install -e ".[dev]"   # installs src/ in editable mode and the dev tools
 pre-commit install               # strips notebook outputs on every commit
 cp config.example.toml config.local.toml   # then edit your raw-data paths
 ```
 
+On MAX IV machines `python` and `python3` are the system Python 3.6 unless
+Anaconda is on your `PATH`. If `python3 --version` says 3.6, make the venv
+with `python3.11 -m venv .venv` instead. From a 3.6 venv the pip step fails
+with `Directory '.' is not installable. File 'setup.py' not found.`, nothing
+gets installed, and `pre-commit install` then says `command not found`.
+
+On the JupyterHub terminal `pip install` does not work as written, see
+[JupyterHub terminal](#jupyterhub-terminal).
+
+`pre-commit` and the other dev tools are in `.venv/bin`, so the shell only
+finds them while the venv is active. In a new terminal, run
+`source .venv/bin/activate` first.
+
 `rixsaqlib` (the VERITAS DLD reader) is not on PyPI. A copy is vendored in
 `extern/rixsaqlib/` and gets installed by the `pip install -e` step above.
+
+### JupyterHub terminal
+
+The Hub sets `PIP_PREFIX=/opt/pip` and `PYTHONPATH=/opt/pip/lib/python3.13/site-packages`.
+With `PIP_PREFIX` set, pip installs into `/opt/pip` whatever venv is active, so
+`src/` never reaches your `.venv`. `PYTHONPATH` can also make the kernel pick up
+`/opt/pip` packages (a wrong numpy gives `numpy._core._multiarray_umath` errors)
+ahead of the venv's. Clear both in every new terminal before installing:
+
+```bash
+cd VERITAS_ANALYSIS
+python3 -m venv .venv            # the Hub's python3 is 3.13
+source .venv/bin/activate
+unset PIP_PREFIX PYTHONPATH
+python -m pip install -e ".[dev]"
+python -c "import RIXS_functions, rixsaqlib; print(RIXS_functions.__file__)"   # path under src/
+```
+
+Use `python -m pip`, not bare `pip`, so the install goes to the active venv.
+To clear the variables on every `source .venv/bin/activate`, run
+`echo 'unset PIP_PREFIX PYTHONPATH' >> .venv/bin/activate` once (a rebuilt
+venv needs it again). Then register the kernel from the activated venv as in
+[Jupyter kernel](#jupyter-kernel). With uv, run `uv sync --extra dev`
+on the Hub, not on another machine (see the note under [With uv](#with-uv)).
 
 ### With uv
 
@@ -100,13 +139,15 @@ and add the modules you use from [Using the code](#using-the-code), e.g.
 
 ### Keeping the kernel in sync
 
+On the Hub, run `unset PIP_PREFIX PYTHONPATH` first (see [JupyterHub terminal](#jupyterhub-terminal)).
+
 | You changed... | pip / venv | uv |
 |---|---|---|
 | A function in an existing `src/` module (edit, add, or delete) | Nothing. `%autoreload 2` reloads the module before the next cell runs | same |
-| A new module file in `src/` | Add it to `py-modules` in `pyproject.toml`, run `pip install -e ".[dev]"`, restart the kernel | Add it to `py-modules`, run `uv sync --extra dev`, restart the kernel |
-| Added a package | Add it to `dependencies` in `pyproject.toml`, run `pip install -e ".[dev]"`, restart the kernel | `uv add <package>`, restart the kernel |
-| Removed a package | Remove it from `dependencies`, `pip uninstall <package>`, restart the kernel | `uv remove <package>`, restart the kernel |
-| Pulled someone else's dependency changes from `main` | `pip install -e ".[dev]"`, restart the kernel | `uv sync --extra dev`, restart the kernel |
+| A new module file in `src/` | Add it to `py-modules` in `pyproject.toml`, run `python -m pip install -e ".[dev]"`, restart the kernel | Add it to `py-modules`, run `uv sync --extra dev`, restart the kernel |
+| Added a package | Add it to `dependencies` in `pyproject.toml`, run `python -m pip install -e ".[dev]"`, restart the kernel | `uv add <package>`, restart the kernel |
+| Removed a package | Remove it from `dependencies`, `python -m pip uninstall <package>`, restart the kernel | `uv remove <package>`, restart the kernel |
+| Pulled someone else's dependency changes from `main` | `python -m pip install -e ".[dev]"`, restart the kernel | `uv sync --extra dev`, restart the kernel |
 
 Notes:
 
@@ -163,7 +204,9 @@ xas = daq.load_scan(10519)                     # aemslit_ch1 against the scanned
 - `calibrated=True` uses the energy scale `energy_scales/index.toml` assigns
   to that acquisition. Without it you get the DAQ's own axis, which is
   channels before acq44 and the DAQ's arm-525 eV calibration from acq44 on.
-  `s.meta["energy_scale"]` says which one you have.
+  The DAQ does not move that axis with the arm, so it is wrong at any other
+  arm energy (at arm 535 eV it ends at 533.5 eV, below the elastic line). Use
+  `calibrated=True` there. `s.meta["energy_scale"]` says which one you have.
 - A scale is only valid for the arm energy it was measured at. Loading an
   acquisition taken at another arm energy, or one where the arm moved during
   the acquisition, gives a warning.

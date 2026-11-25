@@ -26,7 +26,7 @@ import re
 import warnings
 from dataclasses import dataclass
 
-from veritas_paths import ENERGY_SCALES
+from veritas_paths import ENERGY_SCALES, resolve_beamtime
 
 import lmfit
 import numpy as np
@@ -74,7 +74,7 @@ def _fit_peak(channels, counts, window: int, profile: str):
             "fwhm": p["width_0"].value, "counts": counts[sl].sum()}
 
 
-def calibrate_elastic_sweep(acq: int, *, beamtime: str = "n26", order: int = 1,
+def calibrate_elastic_sweep(acq: int, *, beamtime: str | None = None, order: int = 1,
                             min_plateau_s: float = 30.0, profile: str = "gauss", window: int = 300):
     """Channel -> eV scale from an acquisition during which the beamline energy was stepped.
 
@@ -86,6 +86,7 @@ def calibrate_elastic_sweep(acq: int, *, beamtime: str = "n26", order: int = 1,
     Returns (scale, report): scale has one eV value per channel; report has one row
     per plateau, and report.attrs holds the polynomial and the acquisition's metadata.
     """
+    beamtime = resolve_beamtime(beamtime)
     path = daq.acq_file(acq, beamtime)
     with daq.open_h5(path) as f:
         group = f[f"acq{acq}"]

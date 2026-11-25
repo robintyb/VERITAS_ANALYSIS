@@ -27,6 +27,19 @@ def _load_config():
         return tomllib.load(f)
 
 
+FALLBACK_BEAMTIME = "n26"
+
+
+def default_beamtime():
+    """The beamtime used when none is given: [default].beamtime in config.local.toml, else n26."""
+    return _load_config().get("default", {}).get("beamtime", FALLBACK_BEAMTIME)
+
+
+def resolve_beamtime(beamtime=None):
+    """`beamtime` itself, or the configured default when it is None."""
+    return default_beamtime() if beamtime is None else beamtime
+
+
 def raw_data_dir(beamtime):
     """Folder with the raw .h5 files for a beamtime key (e.g. 'm23')."""
     try:

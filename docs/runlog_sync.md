@@ -18,6 +18,11 @@ gid = 0
 csv = "runinfo_files/n26_runlog.csv"
 ```
 
+For a new beamtime, add its own `[runlog.<code>]` and `[raw_data]` entries, with a new `csv` filename
+so the old log is not overwritten, and set `[default] beamtime = "<code>"`. Code that
+is not given a beamtime, and the fetch script run without an argument, then use the new one;
+an older one is still reachable by passing its key.
+
 Then, from the repository root:
 
 ```bash
@@ -63,7 +68,8 @@ for energy maps it holds a range such as `519-527`, and once a list such as
 | `acq`, `entry` | the number from an `acqN` or `entryN` run name |
 | `uncertain` | `True` when the run name ends in `?` |
 | `run_name`, `sample`, `technique`, `comments` | text as typed |
-| `excitation_energy_ev`, `arm_energy_ev`, `step_size`, `temperature_k`, `x`, `y`, `z`, `slit_um` | numbers; empty when the cell is not a plain number |
+| `excitation_energy_ev`, `arm_energy_ev`, `step_size`, `x`, `y`, `z`, `slit_um` | numbers; empty when the cell is not a plain number |
+| `temperature_k` | number, from the sheet's `Temperature (K)` column; the `Temperature setpoint (C)` column is dropped |
 | `time_start` | ISO timestamp |
 | `unparsed` | every numeric cell that did not parse, as `name=text; ...` |
 

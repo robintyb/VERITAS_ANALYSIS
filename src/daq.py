@@ -8,6 +8,9 @@ starts at acq104), so an acquisition or scan entry is identified by its number
 alone and `acq_file` / `entry_file` find the file that holds it. A number found
 in two files raises.
 
+Every function takes `beamtime=`; left out, it is `[default].beamtime` from
+config.local.toml (n26 if the config has none), and a key such as "n26" reads an older beamtime.
+
 The DAQ appends to the RIXS file while people analyse it, so every file is
 opened read-only without HDF5 file locking.
 """
@@ -19,7 +22,11 @@ from datetime import datetime
 from functools import cache
 from pathlib import Path
 
-from veritas_paths import raw_data_dir, runlog_csv  # before h5py, see veritas_paths
+from veritas_paths import (  # before h5py, see veritas_paths
+    raw_data_dir,
+    resolve_beamtime,
+    runlog_csv,
+)
 
 import h5py
 import numpy as np
@@ -42,21 +49,21 @@ def _daq_file(beamtime: str, day, kind: str) -> Path:
     return matches[0]
 
 
-def rixs_file(day, beamtime: str = "n26") -> Path:
-    return _daq_file(beamtime, day, "RIXS")
+def rixs_file(day, beamtime: str | None = None) -> Path:
+    return _daq_file(resolve_beamtime(beamtime), day, "RIXS")
 
 
-def scan_file(day, beamtime: str = "n26") -> Path:
-    return _daq_file(beamtime, day, "Scan")
+def scan_file(day, beamtime: str | None = None) -> Path:
+    return _daq_file(resolve_beamtime(beamtime), day, "Scan")
 
 
 def _day(path: Path) -> str:
     return path.name.split("_")[-2]
 
 
-def days(beamtime: str = "n26") -> list[str]:
+def days(beamtime: str | None = None) -> list[str]:
     """The `day` of every RIXS file in the beamtime's raw-data folder."""
-    return sorted(_day(p) for p in raw_data_dir(beamtime).glob("*_RIXS.h5"))
+    return sorted(_day(p) for p in raw_data_dir(resolve_beamtime(beamtime)).glob("*_RIXS.h5"))
 
 
 def _file_holding(beamtime: str, kind: str, group: str) -> Path:
@@ -76,14 +83,14 @@ def _file_holding(beamtime: str, kind: str, group: str) -> Path:
     return found[0]
 
 
-def acq_file(acq: int, beamtime: str = "n26") -> Path:
+def acq_file(acq: int, beamtime: str | None = None) -> Path:
     """The RIXS file that holds acq<acq>."""
-    return _file_holding(beamtime, "RIXS", f"acq{acq}")
+    return _file_holding(resolve_beamtime(beamtime), "RIXS", f"acq{acq}")
 
 
-def entry_file(entry: int, beamtime: str = "n26") -> Path:
+def entry_file(entry: int, beamtime: str | None = None) -> Path:
     """The Scan file that holds entry<entry>."""
-    return _file_holding(beamtime, "Scan", f"entry{entry}")
+    return _file_holding(resolve_beamtime(beamtime), "Scan", f"entry{entry}")
 
 
 def _all_acqs(beamtime: str) -> list[int]:
@@ -135,7 +142,7 @@ def _manipulator(group) -> dict:
     return positions
 
 
-def manipulator_log(acqs=None, *, beamtime: str = "n26") -> pd.DataFrame:
+def manipulator_log(acqs=None, *, beamtime: str | None = None) -> pd.DataFrame:
     """The sample-manipulator positions logged during the acquisitions, one row per sample.
 
     Columns: time (datetime64, local like start_time), acq, and one column per a_mp1_<axis> that has an
@@ -146,6 +153,7 @@ def manipulator_log(acqs=None, *, beamtime: str = "n26") -> pd.DataFrame:
     """
     if isinstance(acqs, str):
         raise TypeError(f"acqs must be acquisition numbers, not {acqs!r}; manipulator_log no longer takes a day")
+    beamtime = resolve_beamtime(beamtime)
     frames = []
     for acq in _all_acqs(beamtime) if acqs is None else acqs:
         with open_h5(acq_file(acq, beamtime)) as f:
@@ -243,13 +251,13 @@ def dark_corrected_histogram(group):
     return lambda points: _channel_counts(light, points) - _channel_counts(dark, points)
 
 
-def acq_info(acq: int, *, beamtime: str = "n26") -> dict:
+def acq_info(acq: int, *, beamtime: str | None = None) -> dict:
     """Beamline and arm energy, start and end time of one acquisition."""
     with open_h5(acq_file(acq, beamtime)) as f:
         return acq_meta(f[f"acq{acq}"])
 
 
-def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False,
+def load_acq(acq: int, *, beamtime: str | None = None, calibrated: bool = False,
              dark_correct: bool = False) -> Spectrum:
     """The spectrum of one acquisition, from the events in the DAQ's light time window.
 
@@ -271,6 +279,7 @@ def load_acq(acq: int, *, beamtime: str = "n26", calibrated: bool = False,
     Besides the acq_meta summary (including the mean a_mp1_<axis> manipulator
     positions), meta holds all saved metadata, as acq_metadata describes.
     """
+    beamtime = resolve_beamtime(beamtime)
     path = acq_file(acq, beamtime)
     with open_h5(path) as f:
         group = f[f"acq{acq}"]
@@ -312,8 +321,9 @@ def _scanned_motor(title: str, measurement) -> str:
 
 
 def load_scan(entry: int, *, channel: str = "aemslit_ch1", x: str | None = None,
-              beamtime: str = "n26") -> Spectrum:
+              beamtime: str | None = None) -> Spectrum:
     """One channel of a Scan-file entry against the scanned motor (or `x`)."""
+    beamtime = resolve_beamtime(beamtime)
     path = entry_file(entry, beamtime)
     with open_h5(path) as f:
         group = f[f"entry{entry}"]
@@ -330,9 +340,9 @@ def _read_run_log(path: Path, mtime: float) -> pd.DataFrame:
     return pd.read_csv(path, dtype={"acq": "Int64", "entry": "Int64", "day": "string"})
 
 
-def run_log(beamtime: str = "n26") -> pd.DataFrame:
+def run_log(beamtime: str | None = None) -> pd.DataFrame:
     """The run log written by tools/fetch_runlog.py, re-read whenever the CSV changes."""
-    path = runlog_csv(beamtime)
+    path = runlog_csv(resolve_beamtime(beamtime))
     return _read_run_log(path, path.stat().st_mtime).copy()
 
 
@@ -349,8 +359,9 @@ def _log_for(beamtime: str) -> pd.DataFrame:
     return log.drop_duplicates("acq")[["acq", *_LOG_COLUMNS]]
 
 
-def list_acqs(*, beamtime: str = "n26") -> pd.DataFrame:
+def list_acqs(*, beamtime: str | None = None) -> pd.DataFrame:
     """One row per acquisition in the beamtime's RIXS files, with sample and comments from the run log."""
+    beamtime = resolve_beamtime(beamtime)
     rows = []
     for path in raw_data_dir(beamtime).glob("*_RIXS.h5"):
         with open_h5(path) as f:

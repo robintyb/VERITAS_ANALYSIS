@@ -4,6 +4,12 @@
 # Each entry is the folder that contains the raw *_DLD*.h5 files
 # for that beamtime.
 
+# Beamtime used by daq, calibration and tools/fetch_runlog.py when none is
+# passed. Older beamtimes stay reachable by key: daq.load_acq(5, beamtime="n26").
+# Without this block the default is n26.
+[default]
+beamtime = "n26"
+
 [raw_data]
 #!TODO update path
 n26 = "/data/visitors/veritas/<proposal>/<visit>/raw"   # november 2026 beamtime
