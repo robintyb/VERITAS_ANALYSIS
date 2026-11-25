@@ -1,7 +1,7 @@
 """Download a beamtime's run log from Google Sheets and write it as a clean CSV.
 
 Usage:
-    python tools/fetch_runlog.py <beamtime>      # e.g. n26
+    python tools/fetch_runlog.py [<beamtime>]    # e.g. n26; default: [default].beamtime in config.local.toml
 
 The sheet id, tab and output path come from [runlog.<beamtime>] in
 config.local.toml. The sheet must be shared as "anyone with the link can
@@ -14,7 +14,8 @@ Output columns, in order:
     entry        N for a run named entryN (Scan file)
     uncertain    True when the run name ends in '?'
     ...          the sheet's columns, renamed through COLUMNS; unknown
-                 headers pass through, slugified
+                 headers pass through, slugified; columns COLUMNS maps to
+                 None (the temperature setpoint) are dropped
     unparsed     numeric cells that are not a plain number, as name=text
 
 `day` is found by looking the group up in the raw files. One file can run
@@ -40,7 +41,7 @@ from datetime import datetime
 
 import h5py
 
-from veritas_paths import raw_data_dir, runlog_csv, runlog_sheet
+from veritas_paths import raw_data_dir, resolve_beamtime, runlog_csv, runlog_sheet
 
 COLUMNS = {
     'run name': ('run_name', str),
@@ -49,6 +50,7 @@ COLUMNS = {
     'veritas beamline energy': ('excitation_energy_ev', float),
     'step size': ('step_size', float),
     'x-ray energy': ('arm_energy_ev', float),
+    'temperature setpoint': None,
     'temperature': ('temperature_k', float),
     'x coordinates': ('x', float),
     'y coordinates': ('y', float),
@@ -72,6 +74,7 @@ def fetch(sheet_id, gid):
 
 
 def column_for(header):
+    """(name, kind) for a sheet header, or None for a column to drop."""
     key = header.strip().lower()
     for prefix, column in COLUMNS.items():
         if key.startswith(prefix):
@@ -98,7 +101,7 @@ def parse_cell(text, kind):
 
 def parse_sheet(text):
     header, *body = csv.reader(io.StringIO(text))
-    columns = [(i, *column_for(h)) for i, h in enumerate(header) if h.strip()]
+    columns = [(i, *column) for i, h in enumerate(header) if h.strip() and (column := column_for(h))]
     rows, skipped = [], 0
     for cells in body:
         cells = [c.strip() for c in cells]
@@ -174,7 +177,8 @@ def write_if_changed(path, text):
     return True
 
 
-def main(beamtime):
+def main(beamtime=None):
+    beamtime = resolve_beamtime(beamtime)
     rows = parse_sheet(fetch(*runlog_sheet(beamtime)))
     assign_days(rows, raw_index(raw_data_dir(beamtime)))
     path = runlog_csv(beamtime)
@@ -183,9 +187,9 @@ def main(beamtime):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
+    if len(sys.argv) > 2:
         sys.exit(__doc__)
     try:
-        main(sys.argv[1])
+        main(*sys.argv[1:])
     except (urllib.error.URLError, OSError, ValueError, KeyError) as error:
         sys.exit(f'error: {error}; kept the previous CSV')
