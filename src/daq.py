@@ -1,8 +1,9 @@
 """Reading the per-session DAQ files of current beamtimes (n26 onwards).
 
-Raw files are `<prefix>_<day>_RIXS.h5` (groups `acqN`) and
-`<prefix>_<day>_Scan.h5` (groups `entryN`) in `raw_data_dir(beamtime)`.
-`day` is the YYYYMMDD in the file name. The DAQ starts a new file now and
+Raw files are `[<prefix>_]<day>_RIXS[<n>].h5` (groups `acqN`) and
+`[<prefix>_]<day>_Scan[<n>].h5` (groups `entryN`) in `raw_data_dir(beamtime)`:
+n26 has the prefix `W47_`, n26_2 has none and numbers its RIXS files
+(`20261125_RIXS1.h5`). `day` is the YYYYMMDD in the file name. The DAQ starts a new file now and
 then, but acq numbers keep counting across files (n26: W47_20261120_RIXS.h5
 starts at acq104), so an acquisition or scan entry is identified by its number
 alone and `acq_file` / `entry_file` find the file that holds it. A number found
@@ -17,6 +18,7 @@ opened read-only without HDF5 file locking.
 from __future__ import annotations
 
 import copy
+import re
 import warnings
 from datetime import datetime
 from functools import cache
@@ -40,12 +42,25 @@ def open_h5(path) -> h5py.File:
     return h5py.File(path, "r", locking=False)
 
 
+_RAW_NAME = re.compile(r"(?:^|_)(\d{8})_(RIXS|Scan)(\d*)\.h5$")
+
+
+def _raw_files(folder: Path, kind: str, day=None) -> list[Path]:
+    """The `kind` ("RIXS" or "Scan") files in `folder`, of one `day` if given, in date then number order."""
+    found = []
+    for path in folder.iterdir():
+        match = _RAW_NAME.search(path.name)
+        if match and match[2] == kind and day in (None, match[1]):
+            found.append(((match[1], int(match[3] or 0)), path))
+    return [path for _, path in sorted(found)]
+
+
 def _daq_file(beamtime: str, day, kind: str) -> Path:
     folder = raw_data_dir(beamtime)
-    matches = sorted(folder.glob(f"*_{day}_{kind}.h5"))
+    matches = _raw_files(folder, kind, str(day))
     if len(matches) != 1:
         found = ", ".join(m.name for m in matches) or "none"
-        raise FileNotFoundError(f"expected one *_{day}_{kind}.h5 in {folder}, found {found}")
+        raise FileNotFoundError(f"expected one {day}_{kind}[<n>].h5 in {folder}, found {found}")
     return matches[0]
 
 
@@ -58,18 +73,18 @@ def scan_file(day, beamtime: str | None = None) -> Path:
 
 
 def _day(path: Path) -> str:
-    return path.name.split("_")[-2]
+    return _RAW_NAME.search(path.name)[1]
 
 
 def days(beamtime: str | None = None) -> list[str]:
     """The `day` of every RIXS file in the beamtime's raw-data folder."""
-    return sorted(_day(p) for p in raw_data_dir(resolve_beamtime(beamtime)).glob("*_RIXS.h5"))
+    return sorted(_day(p) for p in _raw_files(raw_data_dir(resolve_beamtime(beamtime)), "RIXS"))
 
 
 def _file_holding(beamtime: str, kind: str, group: str) -> Path:
     folder = raw_data_dir(beamtime)
     found, unreadable = [], []
-    for path in sorted(folder.glob(f"*_{kind}.h5")):
+    for path in _raw_files(folder, kind):
         try:
             with open_h5(path) as f:
                 if group in f:
@@ -79,7 +94,7 @@ def _file_holding(beamtime: str, kind: str, group: str) -> Path:
     if len(found) != 1:
         where = ", ".join(p.name for p in found) or "none"
         skipped = f"; could not open {', '.join(unreadable)}" if unreadable else ""
-        raise KeyError(f"expected {group} in one *_{kind}.h5 in {folder}, found it in {where}{skipped}")
+        raise KeyError(f"expected {group} in one {kind} file in {folder}, found it in {where}{skipped}")
     return found[0]
 
 
@@ -95,7 +110,7 @@ def entry_file(entry: int, beamtime: str | None = None) -> Path:
 
 def _all_acqs(beamtime: str) -> list[int]:
     acqs = []
-    for path in raw_data_dir(beamtime).glob("*_RIXS.h5"):
+    for path in _raw_files(raw_data_dir(beamtime), "RIXS"):
         with open_h5(path) as f:
             acqs += [int(name[3:]) for name in f if name.startswith("acq")]
     return sorted(acqs)
@@ -363,7 +378,7 @@ def list_acqs(*, beamtime: str | None = None) -> pd.DataFrame:
     """One row per acquisition in the beamtime's RIXS files, with sample and comments from the run log."""
     beamtime = resolve_beamtime(beamtime)
     rows = []
-    for path in raw_data_dir(beamtime).glob("*_RIXS.h5"):
+    for path in _raw_files(raw_data_dir(beamtime), "RIXS"):
         with open_h5(path) as f:
             for name in f:
                 if not name.startswith("acq"):

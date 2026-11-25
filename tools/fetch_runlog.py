@@ -60,7 +60,7 @@ COLUMNS = {
     'comments': ('comments', str),
 }
 RUN_NAME = re.compile(r'(acq|entry)\s*(\d+)\s*(\?)?', re.IGNORECASE)
-RAW_FILE = re.compile(r'_(\d{8})_(RIXS|Scan)\.h5$')
+RAW_FILE = re.compile(r'(?:^|_)(\d{8})_(RIXS|Scan)(\d*)\.h5$')
 RAW_KIND = {'acq': 'RIXS', 'entry': 'Scan'}
 TIMESTAMP_FORMATS = ('%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M')
 
@@ -131,11 +131,14 @@ def parse_sheet(text):
 def raw_index(raw_dir):
     """{'RIXS': [(day, group names), ...], 'Scan': [...]} in date order."""
     index = {'RIXS': [], 'Scan': []}
-    for path in sorted(raw_dir.iterdir()):
+    found = []
+    for path in raw_dir.iterdir():
         match = RAW_FILE.search(path.name)
         if match:
-            with h5py.File(path, 'r', locking=False) as f:
-                index[match[2]].append((int(match[1]), set(f.keys())))
+            found.append(((int(match[1]), int(match[3] or 0)), match[2], path))
+    for (day, _), kind, path in sorted(found):
+        with h5py.File(path, 'r', locking=False) as f:
+            index[kind].append((day, set(f.keys())))
     return index
 
 

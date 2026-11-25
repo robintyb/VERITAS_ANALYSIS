@@ -64,6 +64,23 @@ def test_acq_file_finds_an_acquisition_in_whichever_file_holds_it(raw_files):
     assert daq._all_acqs("n26") == [0, 1, 2]
 
 
+def test_files_without_a_prefix_and_with_a_number_are_found(tmp_path, monkeypatch):
+    """n26_2 names its files 20261125_RIXS1.h5 and 20261125_Scan.h5."""
+    for name, group in [("20261125_RIXS1.h5", "acq0"), ("20261125_RIXS2.h5", "acq1"),
+                        ("20261125_RIXS10.h5", "acq2"), ("20261125_Scan.h5", "entry10899")]:
+        with h5py.File(tmp_path / name, "w") as f:
+            f.create_group(group)
+    (tmp_path / "notes_RIXS.txt").write_text("not a raw file")
+    monkeypatch.setattr(daq, "raw_data_dir", lambda beamtime: tmp_path)
+    assert daq.acq_file(1).name == "20261125_RIXS2.h5"
+    assert daq.entry_file(10899).name == "20261125_Scan.h5"
+    assert daq.scan_file("20261125").name == "20261125_Scan.h5"
+    assert daq._all_acqs("n26_2") == [0, 1, 2]
+    assert daq.days("n26_2") == ["20261125"] * 3
+    with pytest.raises(FileNotFoundError, match="found 20261125_RIXS1.h5, 20261125_RIXS2.h5, 20261125_RIXS10.h5"):
+        daq.rixs_file("20261125")
+
+
 def test_acq_file_raises_for_a_missing_or_repeated_acquisition(raw_files):
     with pytest.raises(KeyError, match="acq7 .* found it in none"):
         daq.acq_file(7)
